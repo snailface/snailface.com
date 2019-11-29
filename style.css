@@ -9,54 +9,40 @@ img {
   position: absolute;
   right: 5em;
   bottom: 0px;
+  width: 50px;
 }
 
-@media only screen and (max-width: 600px) {
+@media only screen and (min-width: 600px) {
   img {
     position: absolute;
     right: 1em;
     bottom: 0px;
-    width: 100px;
+    width: 15em;
   }
 }
 
-@media only screen and (max-width: 1000px) {
-  img {
 
-    position: absolute;
-    right: 2em;
-    bottom: 0px;
-    width: 150px;
-  }
-  html {
+@media only screen and (min-width: 1500px) {
+  html,body {
       background: url(eye.svg) no-repeat center center fixed;
       background-size: cover;
   }
-}
-
-@media only screen and (max-width: 1500px) {
   img {
     position: absolute;
     right: 3em;
     bottom: 0px;
-    width: 200px;
-  }
-  html {
-      background: url(eye.svg) no-repeat center center fixed;
-      background-size: cover;
+    width: 20em;
   }
 }
 
 body,
 html {
-  background-color: #fff;
+  background-color: #f399b7;
   height: 100%;
   width: 100%;
   padding: 0;
   margin: 0;
   font-family: "Montserrat", sans-serif;
-  background: url(eye.svg) no-repeat center center fixed;
-  background-size: cover;
 }
 
 main {
@@ -75,7 +61,7 @@ main {
   display: none;
   width: 40%;
   left: 0;
-  background-color: #f04c8e;
+  background-color: #73bb6e;
   -webkit-transform: translateY(-100%);
   -moz-transform: translateY(-100%);
   -ms-transform: translateY(-100%);
@@ -87,7 +73,7 @@ main {
 .aside-right {
   width: 100%;
   right: 0;
-  background-color: #f399b7;
+  background-color: #cbde5f;
   -webkit-transform: translateX(100%);
   -moz-transform: translateX(100%);
   -ms-transform: translateX(100%);
@@ -121,7 +107,7 @@ main {
   content: "";
   position: absolute;
   bottom: 0;
-  background-color: #f04c8e;
+  background-color: #73bb6e;
   left: 0;
   right: 0;
   height: 3px;
@@ -213,7 +199,7 @@ label {
 
 .bar {
   display: block;
-  background-color: #f399b7;
+  background-color: #cbde5f;
   width: 2.5em;
   height: 3px;
   border-radius: 5px;
