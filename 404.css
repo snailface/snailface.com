@@ -6,20 +6,23 @@ body {
   margin:0 auto;
 }
 
+span, a, h1 span {
+  color: #f04c8e;
+  font-size: 22px;
+}
 
 @media only screen and (max-width: 1000px) {
   html,body {
-      background: url(snail.svg) no-repeat right;
+      background: url(snail.svg) no-repeat top left;
       background-size: cover;
       background-color: #48a743;
-      position:absolute;
-      right:1em;
+      background-size: 10em;
   }
   img {
     position: absolute;
-    right: 1em;
-    bottom: 0px;
-    width: 15em;
+    right: 2em;
+    bottom: 1px;
+    width: 10em;
   }
   .bar {
     display: block;
@@ -54,15 +57,15 @@ body {
 
 @media only screen and (min-width: 1100px) {
   html,body {
-      background: url(eye.svg) no-repeat center center fixed;
-      background-size: cover;
+      background: url(snail.svg) no-repeat top left fixed;
+      background-size: 10em;
       background-color: #f399b7;
   }
   img {
     position: absolute;
     right: 3em;
     bottom: 0px;
-    width: 20em;
+    width: 15em;
   }
   .bar {
     display: block;
