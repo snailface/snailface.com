@@ -11,7 +11,7 @@ span, a, h1 span {
   font-size: 22px;
 }
 
-@media only screen and (max-width: 1000px) {
+@media only screen and (max-width: 800px) {
   html,body {
       background: url(snail.svg) no-repeat top left;
       background-size: cover;
@@ -55,7 +55,7 @@ span, a, h1 span {
   }
 }
 
-@media only screen and (min-width: 1100px) {
+@media only screen and (min-width: 801px) {
   html,body {
       background: url(snail.svg) no-repeat top left fixed;
       background-size: 10em;
