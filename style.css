@@ -6,7 +6,6 @@ body {
   margin:0 auto;
 }
 
-
 @media only screen and (max-width: 800px) {
   html,body {
       background: url(snail.svg) no-repeat;
@@ -51,7 +50,52 @@ body {
   }
 }
 
-@media only screen and (min-width: 801px) {
+@media only screen and (max-width: 1000px) {
+  html,body {
+      background: url(snail.svg) no-repeat;
+      background-size: cover;
+      background-color: #48a743;
+      right:1em;
+  }
+  img {
+    position: absolute;
+    right: 1em;
+    bottom: 0px;
+    width: 15em;
+  }
+  .bar {
+    display: block;
+    background-color: #cbde5f;
+    width: 10em;
+    height: 1em;
+    border-radius: 5px;
+    margin: 2em auto;
+    transition: background-color 0.4s ease-in, transform 0.4s ease-in,
+      width 0.4s ease-in;
+  }
+  input[type="checkbox"]:checked ~ label .top {
+    -webkit-transform: translateY(0px) rotateZ(145deg);
+    -moz-transform: translateY(0px) rotateZ(145deg);
+    -ms-transform: translateY(0px) rotateZ(145deg);
+    -o-transform: translateY(0px) rotateZ(145deg);
+    transform: translateY(0px) rotateZ(145deg);
+  }
+
+  input[type="checkbox"]:checked ~ label .bottom {
+    -webkit-transform: translateY(-15px) rotateZ(-145deg);
+    -moz-transform: translateY(-15px) rotateZ(-145deg);
+    -ms-transform: translateY(-15px) rotateZ(-145deg);
+    -o-transform: translateY(-15px) rotateZ(-145deg);
+    transform: translateY(-15px) rotateZ(-145deg);
+  }
+
+  input[type="checkbox"]:checked ~ label .middle {
+    width: 0;
+  }
+}
+
+
+@media only screen and (min-width: 1001px) {
   html,body {
       background: url(eye.svg) no-repeat center center fixed;
       background-size: cover;
@@ -147,6 +191,7 @@ main {
   margin-top: 2em;
   text-align: left;
   padding-left: 100px;
+  margin-left: 10em;
 }
 
 .aside-content {
