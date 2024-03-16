@@ -8,7 +8,7 @@ body {
 
 span, a, h1 span {
   color: #f04c8e;
-  font-size: 22px;
+  font-size: 1em;
 }
 
 @media only screen and (max-width: 800px) {
@@ -254,8 +254,10 @@ h1 {
 }
 
 h1 span {
-  font-size: 20px;
+  font-size: 0.75em;
   display: block;
+  padding: 10px;
+  margin: 10px;
 }
 
 p {

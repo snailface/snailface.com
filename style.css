@@ -114,14 +114,37 @@ body {
   }
 
   body {
-  
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: url(eye.svg) no-repeat center center fixed;
     background-size: contain;
     padding-top: 5px;
     padding-bottom: 5px;
+  }
+  .background-image {
+    position: fixed; /* or absolute */
+    width: 100%;
+    height: 100%;
+    background: url(eye.svg) no-repeat center center fixed;
+    background-size: contain;
+    animation: fadeInGrowMove 5s ease;
+  }
+  @keyframes fadeInGrowMove {
+    0% {
+      opacity: 0.33;
+      background-size: 0%;
+      transform: translate(0px, 0px);
+    }
+    50% {
+      opacity: 0.67;
+      background-size: 50%;
+      transform: translate(10px, 10px); /* Small movement */
+    }
+    100% {
+      opacity: 1;
+      background-size: 100%;
+      transform: translate(0px, 0px);
+    }
   }
   img {
     position: absolute;
@@ -377,5 +400,3 @@ textarea.form-textarea {
   color: white;
   opacity: 1; /* Firefox lowers the opacity by default, so reset it if needed */
 }
-
-
