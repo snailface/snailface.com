@@ -309,10 +309,10 @@ p {
   padding-bottom: 7px;
   position: relative;
   cursor: pointer;
-  font-size: 5em;
+  font-size: 3em;
   color: white;
   padding: 7px 50px;
-  border: 2px solid white;
+  float:right;
 }
 
 @media (min-width: 992px) {
@@ -326,4 +326,32 @@ p {
   .aside-right {
     width: 60%;
   }
+}
+
+input.form-input, textarea.form-textarea {
+  display: inline-block;
+  background-image: none;
+  border: none;
+  background-color: transparent;
+  padding-bottom: 7px;
+  position: relative;
+  cursor: pointer;
+  color: #73bb6e;
+  padding: 7px 10px;
+  border: 2px solid white;
+  width: 100%;
+  font-family: "Montserrat", sans-serif;
+}
+
+textarea.form-textarea {
+  min-height: 150px;
+  max-height: 400px; /* Adjust min and max values as needed */
+  overflow-y: auto; /* Adds a scrollbar if the content exceeds max-height */
+  font-family: "Montserrat", sans-serif;
+}
+
+/* Style placeholders for input fields */
+.form-input::placeholder, .form-textarea::placeholder {
+  color: white;
+  opacity: 1; /* Firefox lowers the opacity by default, so reset it if needed */
 }

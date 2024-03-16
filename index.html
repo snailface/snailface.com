@@ -40,14 +40,49 @@
     </div>
     <div class="aside-section aside-right">
       <ul class="aside-list">
-        <li><a href="#" class="aside-anchor">interactive</a></li>
-        <li><a href="mailto:andrew@snailface.com"><button class="button" > connect </button></a></li>
-        <li><a href="/files" target="_blank"><button class="button" > files </button></a></li>
+        <li class="aside-anchor">your means of interaction</li>
+        
+        <form name="contact" method="POST" netlify>
+          <li class="form-item">
+            <label class="aside-anchor"">your name<input type="text" name="name" class="form-input" placeholder="your name"/></label>
+          </li>
+          <li class="form-item">
+            <label class="aside-anchor">your email: <input type="email" name="email" class="form-input" placeholder="your email"/></label>
+          </li>
+          <li class="form-item">
+            <label class="aside-anchor">your message: <textarea name="message" class="form-textarea" placeholder="what do you want to say?"></textarea></label>
+          </li>
+          <li class="form-item">
+            <button type="submit" class="button">post</button>
+          </li>
+        </form>
+
+        
       </ul>
     </div>
   </aside>
 </main>
+<script>
+  document.getElementById('contact-form').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent the default form submit
 
+    var form = this;
+    var data = new FormData(form);
+
+    fetch('/', {
+      method: 'POST',
+      body: data
+    }).then(() => {
+      // Show the success message
+      document.getElementById('success-message').style.display = 'block';
+      // Optionally, hide or reset the form
+      // form.style.display = 'none';
+      // form.reset();
+    }).catch(() => {
+      // Handle errors if required
+      alert('There was an error submitting the form. Please try again.');
+    });
+  });
+</script>
 </body>
-
 </html>
