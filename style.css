@@ -2,6 +2,14 @@
 
 * { margin: 0; padding: 0; }
 
+.footer, #footer {
+  position: fixed !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  padding: 10px;
+  background-color: #cbde5f;
+}
+
 body {
   margin:0 auto;
 }
@@ -353,13 +361,13 @@ input.form-input, textarea.form-textarea {
   color: #73bb6e;
   padding: 7px 10px;
   border: 2px solid white;
-  min-width: 425px;
+  min-width: 45em;
   font-family: "Montserrat", sans-serif;
 }
 
 textarea.form-textarea {
-  min-height: 150px;
-  max-height: 400px; /* Adjust min and max values as needed */
+  min-height: 20em;
+  max-height: 40em; /* Adjust min and max values as needed */
   overflow-y: auto; /* Adds a scrollbar if the content exceeds max-height */
   font-family: "Montserrat", sans-serif;
 }
@@ -369,3 +377,5 @@ textarea.form-textarea {
   color: white;
   opacity: 1; /* Firefox lowers the opacity by default, so reset it if needed */
 }
+
+
