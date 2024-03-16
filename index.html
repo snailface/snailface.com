@@ -35,22 +35,22 @@
   <aside>
     <div class="aside-section aside-left">
       <div class="aside-content">
-        <p> welcome to snailface - leave a message after the beep.</p>
+        <p> welcome to snailface - post a message after the beep.</p>
       </div>
     </div>
     <div class="aside-section aside-right">
       <ul class="aside-list">
-        <li class="aside-anchor">your means of interaction</li>
+        <li class="aside-anchor">a means of interaction</li>
         
-        <form name="contact" method="POST" netlify>
+        <form name="contact" method="POST" action="/thank-you.html" netlify>
           <li class="form-item">
-            <label class="aside-anchor"">your name<input type="text" name="name" class="form-input" placeholder="your name"/></label>
+            <label class="aside-anchor"">your name: <br> <input type="text" name="name" class="form-input" placeholder="your name"/></label>
           </li>
           <li class="form-item">
-            <label class="aside-anchor">your email: <input type="email" name="email" class="form-input" placeholder="your email"/></label>
+            <label class="aside-anchor">your email: <br> <input type="email" name="email" class="form-input" placeholder="your email"/></label>
           </li>
           <li class="form-item">
-            <label class="aside-anchor">your message: <textarea name="message" class="form-textarea" placeholder="what do you want to say?"></textarea></label>
+            <label class="aside-anchor">your message: <br> <textarea name="message" class="form-textarea" placeholder="what do you want to say?"></textarea></label>
           </li>
           <li class="form-item">
             <button type="submit" class="button">post</button>

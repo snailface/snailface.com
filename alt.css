@@ -15,7 +15,7 @@ span, a, h1 span {
   html,body {
       background: url(snail.svg) no-repeat top left;
       background-size: cover;
-      background-color: #48a743;
+      background-color: #cbde5f;
       background-size: 10em;
   }
   img {
@@ -26,7 +26,7 @@ span, a, h1 span {
   }
   .bar {
     display: block;
-    background-color: #cbde5f;
+    background-color: #48a743;
     width: 10em;
     height: 1em;
     border-radius: 5px;
@@ -60,7 +60,9 @@ span, a, h1 span {
       background: url(snail.svg) no-repeat top left fixed;
       background-size: 10em;
       background-color: #f399b7;
+      background-position: 5px 5px; /* Adjust these values as needed */
   }
+
   img {
     position: absolute;
     right: 3em;
@@ -69,7 +71,7 @@ span, a, h1 span {
   }
   .bar {
     display: block;
-    background-color: #cbde5f;
+    background-color: #48a743;
     width: 2.5em;
     height: 3px;
     border-radius: 5px;
