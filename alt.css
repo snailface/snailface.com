@@ -84,8 +84,8 @@ screen and (hover: none) and (pointer: coarse) {
   }
   img {
     position: absolute;
-    right: 3em;
-    bottom: 0px;
+    right: 2em;
+    bottom: 1px;
     width: 15em;
   }
   span, a, h1 span {
