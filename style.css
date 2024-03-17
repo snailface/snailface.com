@@ -6,15 +6,18 @@
   left: 0 !important;
   bottom: 0 !important;
   padding: 10px;
-  background-color: #cbde5f;
+  font-size: 1.5em !important;
+  background-color: #f399b7;
+  font-family: "Montserrat", sans-serif;
 }
 body {
   margin:0 auto;
 }
+.background-image {
+  background-size: auto;
+}
 @media only screen and (max-width: 800px) {
   html,body {
-      background: url(snail.svg) no-repeat;
-      background-size: cover;
       background-color: #cbde5f;
       right:1em;
   }
@@ -26,7 +29,7 @@ body {
   }
   .bar {
     display: block;
-    background-color: #cbde5f;
+    background-color: #f399b7;
     width: 10em;
     height: 1em;
     border-radius: 5px;
@@ -54,10 +57,34 @@ body {
 }
 @media only screen and (max-width: 1000px) {
   html,body {
-      background: url(snail.svg) no-repeat;
       background-size: cover;
       background-color: #cbde5f;
       right:1em;
+  }
+  body {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-size: contain;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .background-image {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: url(eye.svg) no-repeat center center fixed;
+    background-size: auto 100%;
+    opacity: 0;
+    animation: showImage 4s ease-out 1s forwards;
+  }
+  @keyframes showImage {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
   }
   img {
     position: absolute;
@@ -67,7 +94,7 @@ body {
   }
   .bar {
     display: block;
-    background-color: #48a743;
+    background-color: #f399b7;
     width: 6em;
     height: 1em;
     border-radius: 2px;
@@ -98,7 +125,7 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
-    background-color: #f399b7;
+    background-color: #cbde5f;
   }
   body {
     flex-direction: column;
@@ -113,7 +140,7 @@ body {
     width: 100%;
     height: 100%;
     background: url(eye.svg) no-repeat center center fixed;
-    background-size: contain;
+    background-size: 100% auto;
     opacity: 0;
     animation: showImage 4s ease-out 1s forwards;
   }
@@ -133,27 +160,27 @@ body {
   }
   .bar {
     display: block;
-    background-color: #cbde5f;
-    width: 2.5em;
-    height: 3px;
+    background-color: #f399b7;
+    width: 3em;
     border-radius: 5px;
     margin: 5px auto;
     transition: background-color 0.4s ease-in, transform 0.4s ease-in,
       width 0.4s ease-in;
+    height: 5px;
   }
   input[type="checkbox"]:checked ~ label .top {
-    -webkit-transform: translateY(0px) rotateZ(45deg);
-    -moz-transform: translateY(0px) rotateZ(45deg);
-    -ms-transform: translateY(0px) rotateZ(45deg);
-    -o-transform: translateY(0px) rotateZ(45deg);
-    transform: translateY(0px) rotateZ(45deg);
+    -webkit-transform: translateY(10px) rotateZ(50deg);
+    -moz-transform: translateY(10px) rotateZ(50deg);
+    -ms-transform: translateY(10px) rotateZ(50deg);
+    -o-transform: translateY(10px) rotateZ(50deg);
+    transform: translateY(10px) rotateZ(50deg);
   }
   input[type="checkbox"]:checked ~ label .bottom {
-    -webkit-transform: translateY(-15px) rotateZ(-45deg);
-    -moz-transform: translateY(-15px) rotateZ(-45deg);
-    -ms-transform: translateY(-15px) rotateZ(-45deg);
-    -o-transform: translateY(-15px) rotateZ(-45deg);
-    transform: translateY(-15px) rotateZ(-45deg);
+    -webkit-transform: translateY(-10px) rotateZ(-50deg);
+    -moz-transform: translateY(-10px) rotateZ(-50deg);
+    -ms-transform: translateY(-10px) rotateZ(-50deg);
+    -o-transform: translateY(-10px) rotateZ(-50deg);
+    transform: translateY(-10px) rotateZ(-50deg);
   }
   input[type="checkbox"]:checked ~ label .middle {
     width: 0;
@@ -206,8 +233,9 @@ main {
   margin: 0;
   margin-top: 2em;
   text-align: left;
-  padding-left: 100px;
-  margin-left: 5em;
+  padding-left: 10em;
+  max-height: 90vh; /* Adjust the value as needed */
+  overflow-y: auto; /* Enables vertical scrolling */
 }
 .aside-content {
   margin-top: 150px;
@@ -333,14 +361,15 @@ input.form-input, textarea.form-textarea {
   padding-bottom: 7px;
   position: relative;
   cursor: pointer;
-  color: #73bb6e;
+  color: #518188;
   padding: 7px 10px;
   border: 2px solid white;
-  min-width: 45em;
+  min-width: 30em;
+  font-size: 20px;
   font-family: "Montserrat", sans-serif;
 }
 textarea.form-textarea {
-  min-height: 20em;
+  min-height: 15em;
   max-height: 40em; 
   overflow-y: auto; 
   font-family: "Montserrat", sans-serif;

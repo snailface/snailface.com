@@ -4,22 +4,31 @@
 body {
   margin:0 auto;
 }
-span, a, h1 span {
-  color: #f04c8e;
-  font-size: 1em;
-}
-@media only screen and (max-width: 800px) {
+
+@media only screen and (max-width: 768px),screen and (orientation: portrait), 
+screen and (hover: none) and (pointer: coarse) {
   html,body {
       background: url(snail.svg) no-repeat top left;
       background-size: cover;
       background-color: #cbde5f;
-      background-size: 10em;
+      background-size: 45% !important;
+      background-position: 10px 10px !important; 
   }
   img {
     position: absolute;
     right: 2em;
     bottom: 1px;
-    width: 10em;
+    width: 15em;
+  }
+  span, a, h1 span {
+    color: #f04c8e;
+    font-size: 1em !important;
+  }
+  h1 span {
+    font-size: 2em !important;
+    display: block;
+    padding: 10px;
+    margin: 10px;
   }
   .bar {
     display: block;
@@ -51,18 +60,33 @@ span, a, h1 span {
     width: 0;
   }
 }
-@media only screen and (min-width: 801px) {
+@media only screen and (min-width: 769px) {
   html,body {
       background: url(snail.svg) no-repeat top left fixed;
       background-size: 10em;
       background-color: #f399b7;
-      background-position: 5px 5px; /* Adjust these values as needed */
+      background-position: 5px 5px; 
+  }
+  br {
+    content: "";
+    display: block;
+    margin-top: 20px;
   }
   img {
     position: absolute;
     right: 3em;
     bottom: 0px;
     width: 15em;
+  }
+  span, a, h1 span {
+    color: #f04c8e;
+    font-size: 1em;
+  }
+  h1 span {
+    font-size: 0.8em;
+    display: block;
+    padding: 10px;
+    margin: 10px;
   }
   .bar {
     display: block;
@@ -226,12 +250,7 @@ h1 {
   text-align: center;
   font-size: 30px;
 }
-h1 span {
-  font-size: 0.75em;
-  display: block;
-  padding: 10px;
-  margin: 10px;
-}
+
 p {
   font-size: 30px;
 }
@@ -248,14 +267,4 @@ p {
   padding: 7px 50px;
   border: 2px solid white;
 }
-@media (min-width: 992px) {
-  h1 {
-    font-size: 40px;
-  }
-  .aside-left {
-    display: block;
-  }
-  .aside-right {
-    width: 60%;
-  }
-}
+
