@@ -8,6 +8,8 @@
   padding: 10px;
   font-size: 1.5em !important;
   background-color: #f399b7;
+  color: #cbde5f;
+  font-weight: bold;
   font-family: "Montserrat", sans-serif;
 }
 body {
@@ -231,9 +233,9 @@ main {
   list-style: none;
   padding: 0;
   margin: 0;
-  margin-top: 2em;
+  margin-top: 1em;
   text-align: left;
-  padding-left: 10em;
+  padding-left: 8em;
   max-height: 90vh; /* Adjust the value as needed */
   overflow-y: auto; /* Enables vertical scrolling */
 }
@@ -243,9 +245,6 @@ main {
   position: relative;
   color: white;
   text-align: center;
-}
-.aside-list li {
-  margin-bottom: 20px;
 }
 .aside-anchor::after {
   content: "";
@@ -282,9 +281,9 @@ main {
   padding-bottom: 7px;
   color: #fff;
   text-decoration: none;
-  font-size: 30px;
+  font-size: 2em;
   position: relative;
-  font-weight: 500;
+  font-weight: 700;
 }
 input[type="checkbox"] {
   display: none;
@@ -363,14 +362,14 @@ input.form-input, textarea.form-textarea {
   cursor: pointer;
   color: #518188;
   padding: 7px 10px;
-  border: 2px solid white;
-  min-width: 30em;
-  font-size: 20px;
+  border: 3px dashed white;
+  min-width: 15em;
+  font-size: 1.5em;
   font-family: "Montserrat", sans-serif;
 }
 textarea.form-textarea {
-  min-height: 15em;
-  max-height: 40em; 
+  min-height: 7.5em;
+  max-height: 30em; 
   overflow-y: auto; 
   font-family: "Montserrat", sans-serif;
 }

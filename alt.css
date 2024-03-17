@@ -4,7 +4,17 @@
 body {
   margin:0 auto;
 }
-
+.footer, #footer {
+  position: fixed !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  padding: 10px;
+  font-size: 1.5em !important;
+  background-color: #cbde5f;
+  color: #f399b7;
+  font-weight: bold;
+  font-family: "Montserrat", sans-serif;
+}
 @media only screen and (max-width: 768px),screen and (orientation: portrait), 
 screen and (hover: none) and (pointer: coarse) {
   html,body {
@@ -243,7 +253,7 @@ label {
 h1 {
   margin: 0;
   position: relative;
-  top: 50%;
+  top: 45%;
   left: 0;
   right: 0;
   transform: translateY(-50%);
