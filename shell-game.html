@@ -17,7 +17,7 @@
         #gameInfo {
             font-family: Arial, sans-serif;
             margin: 10px;
-            font-size: 20px;
+            font-size: 18px;
             text-align: center;
             width: 100%;
             box-sizing: border-box;
@@ -123,15 +123,19 @@
             speed: 5, // Consistent speed
             dx: 0,
             dy: 0,
-            canPassThroughWall: false, // New flag to allow passing through walls when stuck
-            invincible: false, // Flag for invincibility
-            invincibleTimer: 0 // Timer for invincibility duration
+            canPassThroughWall: false,
+            invincible: false,
+            invincibleTimer: 0,
+            speedBoosted: false,
+            speedBoostTimer: 0,
         };
 
         let shells = [];
         let enemies = [];
         let walls = [];
         let balls = []; // Array to hold balls
+        let powerUps = []; // Array to hold power-ups
+        let coins = []; // Array to hold coins
         let collectedShells = 0;
         let level = 1;
         let hearts = 3;
@@ -150,17 +154,17 @@
         const levelObjectives = {
             1: 'Collect 5 shells to proceed.',
             2: 'Beware of the enemies!',
-            3: 'Watch out for more enemies.',
+            3: 'More enemies are coming.',
             4: 'Enemies are getting faster.',
             5: 'Walls have appeared!',
             6: 'Navigate through the maze.',
             7: 'Enemies can pass through walls!',
             8: 'Big enemies ahead!',
             9: 'Enemies are invulnerable!',
-            10: 'Survive the onslaught!'
+            10: 'Survive the onslaught!',
         };
 
-        // Since CSS handles the canvas scaling, no need to adjust canvas size via JavaScript
+        // Adjust canvas size to maintain aspect ratio (No scaling via JavaScript)
         function resizeCanvas() {
             // No scaling needed
         }
@@ -187,6 +191,42 @@
             return shell;
         }
 
+        function createPowerUp() {
+            let powerUp;
+            let attempts = 0;
+            do {
+                powerUp = {
+                    x: Math.random() * (gameWidth - 30) + 15,
+                    y: Math.random() * (gameHeight - 30) + 15,
+                    size: 20,
+                    type: Math.random() < 0.5 ? 'speed' : 'shield'
+                };
+                attempts++;
+                if (attempts > 100) {
+                    break;
+                }
+            } while (isOverlappingWall(powerUp.x, powerUp.y, powerUp.size));
+            return powerUp;
+        }
+
+        function createCoin() {
+            let coin;
+            let attempts = 0;
+            do {
+                coin = {
+                    x: Math.random() * (gameWidth - 30) + 15,
+                    y: Math.random() * (gameHeight - 30) + 15,
+                    size: 10,
+                    value: 5
+                };
+                attempts++;
+                if (attempts > 100) {
+                    break;
+                }
+            } while (isOverlappingWall(coin.x, coin.y, coin.size));
+            return coin;
+        }
+
         function isOverlappingWall(x, y, size) {
             return walls.some(wall => 
                 x - size / 2 < wall.x + wall.width &&
@@ -205,15 +245,25 @@
                 y = Math.random() * gameHeight;
             } while (Math.sqrt((x - snail.x)**2 + (y - snail.y)**2) < safeDistance);
 
+            // Determine enemy speed based on level
+            let baseSpeed = (isBig ? snail.speed / 2 : snail.speed / 1.5);
+            if (level % 5 === 0) {
+                baseSpeed += level / 5; // Increase speed every 5 levels
+            }
+
+            // Determine if it's a fast enemy
+            let isFast = Math.random() < 0.2 && level > 3; // 20% chance if level > 3
+
             return { 
                 x, y, 
                 size: (isBig ? 30 : 15) * sizeMultiplier, 
-                speed: (isBig ? snail.speed / 2 : snail.speed / 1.5),
+                speed: isFast ? baseSpeed * 1.5 : baseSpeed,
                 health: isBig ? 2 : 1,
                 invulnerable: level > 9, // Enemies are invulnerable after level 9
                 canPassThroughWalls: level > 6, // Enemies can pass through walls after level 6
                 isConfused: false, // Enemy confusion state
-                confusionTimer: 0 // Timer for confusion duration
+                confusionTimer: 0, // Timer for confusion duration
+                isFast: isFast // Fast enemy flag
             };
         }
 
@@ -240,17 +290,24 @@
             for (let i = 0; i < shellCount; i++) {
                 shells.push(createShell());
             }
+
             enemies = [];
             if (level > 1) {
                 if (level > 7) {
                     // After Level 7, big enemies appear
                     enemies.push(createEnemy(true, 3));
                 } else {
-                    for (let i = 0; i < Math.min(level - 1, 4); i++) {
+                    let enemyCount = Math.min(level - 1, 4);
+                    // Increase enemy count every 5 levels
+                    if (level % 5 === 0) {
+                        enemyCount += level / 5;
+                    }
+                    for (let i = 0; i < enemyCount; i++) {
                         enemies.push(createEnemy());
                     }
                 }
             }
+
             if (level > 4) {
                 walls = [];
                 for (let i = 0; i < level - 4; i++) {
@@ -259,7 +316,10 @@
             } else {
                 walls = []; // Ensure walls are reset if level <= 4
             }
+
             balls = []; // Reset balls
+            powerUps = []; // Reset power-ups
+            coins = []; // Reset coins
             collectedShells = 0;
             hearts = 3;
 
@@ -269,12 +329,13 @@
                 snail.y = Math.random() * (gameHeight - snail.size) + snail.size / 2;
             } while (isSnailOverlappingWall());
 
-            // Reset the canPassThroughWall flag
+            // Reset snail properties
             snail.canPassThroughWall = false;
-
-            // Set invincibility
             snail.invincible = true;
-            snail.invincibleTimer = 180; // Assuming 60 FPS, 3 seconds * 60 = 180 frames
+            snail.invincibleTimer = 180; // 3 seconds invincibility
+            snail.speed = 5; // Reset speed
+            snail.speedBoosted = false;
+            snail.speedBoostTimer = 0;
 
             // Start blinking effect
             if (blinkInterval) clearInterval(blinkInterval);
@@ -346,10 +407,38 @@
             });
         }
 
+        function drawPowerUps() {
+            powerUps.forEach(powerUp => {
+                ctx.font = `${powerUp.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (powerUp.type === 'speed') {
+                    ctx.fillStyle = 'blue';
+                    ctx.fillText('⚡', powerUp.x, powerUp.y);
+                } else if (powerUp.type === 'shield') {
+                    ctx.fillStyle = 'gold';
+                    ctx.fillText('🛡️', powerUp.x, powerUp.y);
+                }
+            });
+        }
+
+        function drawCoins() {
+            coins.forEach(coin => {
+                ctx.fillStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'orange';
+                ctx.stroke();
+            });
+        }
+
         function drawEnemies() {
             enemies.forEach(enemy => {
                 if (enemy.isConfused) {
                     ctx.fillStyle = 'purple';
+                } else if (enemy.isFast) {
+                    ctx.fillStyle = 'orange';
                 } else {
                     ctx.fillStyle = enemy.health > 1 ? 'darkred' : 'red';
                 }
@@ -582,6 +671,40 @@
                 }
             });
 
+            // Snail and power-ups
+            powerUps.forEach((powerUp, powerUpIndex) => {
+                const dx = snail.x - powerUp.x;
+                const dy = snail.y - powerUp.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < snail.size/2 + powerUp.size/2) {
+                    powerUps.splice(powerUpIndex, 1);
+                    if (powerUp.type === 'speed') {
+                        snail.speed *= 1.5;
+                        snail.speedBoosted = true;
+                        snail.speedBoostTimer = 300; // Lasts for 5 seconds
+                    } else if (powerUp.type === 'shield') {
+                        snail.invincible = true;
+                        snail.invincibleTimer = 300; // Lasts for 5 seconds
+                        if (blinkInterval) clearInterval(blinkInterval);
+                        blinkInterval = setInterval(() => {
+                            blinkToggle = !blinkToggle;
+                        }, 250);
+                    }
+                }
+            });
+
+            // Snail and coins
+            coins.forEach((coin, coinIndex) => {
+                const dx = snail.x - coin.x;
+                const dy = snail.y - coin.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < snail.size/2 + coin.size) {
+                    coins.splice(coinIndex, 1);
+                    score += coin.value;
+                    updateGUI();
+                }
+            });
+
             // Snail and enemies
             enemies.forEach((enemy, enemyIndex) => {
                 const dxEnemy = snail.x - enemy.x;
@@ -597,46 +720,29 @@
                     } else if (snail.invincible) {
                         // Do nothing, snail is invincible
                     } else {
-                        const nearShell = shells.some(shell => {
-                            const dxShell = snail.x - shell.x;
-                            const dyShell = snail.y - shell.y;
-                            const distanceShell = Math.sqrt(dxShell * dxShell + dyShell * dyShell);
-                            return distanceShell < shell.blastRadius + enemy.size;
-                        });
-
-                        if (nearShell && !enemy.invulnerable) {
-                            enemy.health--;
-                            if (enemy.health <= 0) {
-                                enemies.splice(enemyIndex, 1);
-                                score += 25;
-                                // Update GUI after defeating an enemy
-                                updateGUI();
-                            }
+                        hearts--;
+                        if (hearts === 0) {
+                            gameState = 'gameOver';
+                            clearInterval(blinkInterval); // Stop blinking on game over
                         } else {
-                            hearts--;
-                            if (hearts === 0) {
-                                gameState = 'gameOver';
-                                clearInterval(blinkInterval); // Stop blinking on game over
-                            } else {
-                                // Reset the snail's position
-                                do {
-                                    snail.x = gameWidth / 2;
-                                    snail.y = gameHeight / 2;
-                                } while (isSnailOverlappingWall());
+                            // Reset the snail's position
+                            do {
+                                snail.x = gameWidth / 2;
+                                snail.y = gameHeight / 2;
+                            } while (isSnailOverlappingWall());
 
-                                // Set invincibility after losing a heart
-                                snail.invincible = true;
-                                snail.invincibleTimer = 180; // 3 seconds invincibility
-                                // Start blinking effect
-                                if (blinkInterval) clearInterval(blinkInterval);
-                                blinkInterval = setInterval(() => {
-                                    blinkToggle = !blinkToggle;
-                                }, 250); // Toggle every 250ms
-                            }
-
-                            // Update GUI after losing a heart
-                            updateGUI();
+                            // Set invincibility after losing a heart
+                            snail.invincible = true;
+                            snail.invincibleTimer = 180; // 3 seconds invincibility
+                            // Start blinking effect
+                            if (blinkInterval) clearInterval(blinkInterval);
+                            blinkInterval = setInterval(() => {
+                                blinkToggle = !blinkToggle;
+                            }, 250); // Toggle every 250ms
                         }
+
+                        // Update GUI after losing a heart
+                        updateGUI();
                     }
                 }
             });
@@ -706,6 +812,26 @@
                     blinkToggle = true; // Ensure the snail is visible after invincibility ends
                 }
             }
+
+            if (snail.speedBoosted) {
+                snail.speedBoostTimer--;
+                if (snail.speedBoostTimer <= 0) {
+                    snail.speed /= 1.5;
+                    snail.speedBoosted = false;
+                }
+            }
+        }
+
+        function spawnPowerUpsAndCoins() {
+            // Spawn power-ups
+            if (Math.random() < 0.005) { // Adjust spawn rate as needed
+                powerUps.push(createPowerUp());
+            }
+
+            // Spawn coins
+            if (Math.random() < 0.01) { // Adjust spawn rate as needed
+                coins.push(createCoin());
+            }
         }
 
         function gameLoop() {
@@ -719,15 +845,20 @@
                 moveBalls();
                 checkCollisions();
                 updateInvincibility();
+                spawnPowerUpsAndCoins();
 
                 drawWalls();
                 drawShells();
+                drawPowerUps();
+                drawCoins();
                 drawEnemies();
                 drawBalls();
                 drawSnail(); // Draw the snail last
             } else if (gameState === 'levelComplete') {
                 drawWalls();
                 drawShells();
+                drawPowerUps();
+                drawCoins();
                 drawEnemies();
                 drawBalls();
                 drawSnail();
@@ -735,6 +866,8 @@
             } else if (gameState === 'gameOver') {
                 drawWalls();
                 drawShells();
+                drawPowerUps();
+                drawCoins();
                 drawEnemies();
                 drawBalls();
                 drawSnail();
@@ -810,10 +943,6 @@
         joystickBase.addEventListener('touchmove', handleJoystickMove, { passive: false });
         joystickBase.addEventListener('touchend', handleJoystickEnd);
         joystickBase.addEventListener('touchcancel', handleJoystickEnd);
-        joystickBase.addEventListener('mousedown', handleJoystickStart);
-        joystickBase.addEventListener('mousemove', handleJoystickMove);
-        joystickBase.addEventListener('mouseup', handleJoystickEnd);
-        joystickBase.addEventListener('mouseleave', handleJoystickEnd);
 
         function handleJoystickStart(event) {
             event.preventDefault();
@@ -822,9 +951,6 @@
                 const touch = event.touches[0];
                 joystickStartX = touch.clientX;
                 joystickStartY = touch.clientY;
-            } else {
-                joystickStartX = event.clientX;
-                joystickStartY = event.clientY;
             }
         }
 
@@ -836,9 +962,6 @@
                 const touch = event.touches[0];
                 clientX = touch.clientX;
                 clientY = touch.clientY;
-            } else {
-                clientX = event.clientX;
-                clientY = event.clientY;
             }
 
             const rect = joystickBase.getBoundingClientRect();
