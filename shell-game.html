@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Shell Game</title>
+    <title>Snailface Shell Game</title>
     <!-- Mobile responsiveness -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <style>
@@ -25,15 +25,16 @@
         #canvasContainer {
             position: relative;
             width: 100%;
+            max-width: 800px; /* Added max-width */
             overflow: hidden;
         }
         canvas { 
             border: 2px solid #000; 
             outline: none; /* Remove outline when focused */
             background-color: #f399b7; /* Game window (canvas) background color */
-            width: 100vw; /* Full viewport width */
-            height: calc(100vw * 0.75); /* Maintain aspect ratio (4:3) */
-            max-height: 75vh; /* Optional: prevent canvas from exceeding viewport height */
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4 / 3; /* Maintain aspect ratio */
             display: block;
         }
         /* Joystick Styles */
@@ -198,8 +199,9 @@
                 powerUp = {
                     x: Math.random() * (gameWidth - 30) + 15,
                     y: Math.random() * (gameHeight - 30) + 15,
-                    size: 20,
-                    type: Math.random() < 0.5 ? 'speed' : 'shield'
+                    size: 30, // Increased size for visibility
+                    type: Math.random() < 0.5 ? 'speed' : 'shield',
+                    animationPhase: 0, // For pulsing animation
                 };
                 attempts++;
                 if (attempts > 100) {
@@ -216,7 +218,7 @@
                 coin = {
                     x: Math.random() * (gameWidth - 30) + 15,
                     y: Math.random() * (gameHeight - 30) + 15,
-                    size: 10,
+                    size: 15,
                     value: 5
                 };
                 attempts++;
@@ -239,11 +241,15 @@
         function createEnemy(isBig = false, sizeMultiplier = 1) {
             const safeDistance = Math.max(gameWidth, gameHeight) / 2;
             let x, y;
+            let attempts = 0;
 
             do {
                 x = Math.random() * gameWidth;
                 y = Math.random() * gameHeight;
-            } while (Math.sqrt((x - snail.x)**2 + (y - snail.y)**2) < safeDistance);
+                attempts++;
+                if (attempts > 100) break; // Prevent infinite loop
+            } while (Math.sqrt((x - snail.x)**2 + (y - snail.y)**2) < safeDistance || 
+                     enemies.some(enemy => Math.sqrt((x - enemy.x)**2 + (y - enemy.y)**2) < (enemy.size + 20)));
 
             // Determine enemy speed based on level
             let baseSpeed = (isBig ? snail.speed / 2 : snail.speed / 1.5);
@@ -409,32 +415,57 @@
 
         function drawPowerUps() {
             powerUps.forEach(powerUp => {
-                ctx.font = `${powerUp.size}px Arial`;
+                ctx.save();
+                ctx.translate(powerUp.x, powerUp.y);
+
+                // Apply pulsing animation
+                const scale = 1 + 0.1 * Math.sin(powerUp.animationPhase);
+                powerUp.animationPhase += 0.1;
+                ctx.scale(scale, scale);
+
+                // Draw glow effect
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, powerUp.size);
+                gradient.addColorStop(0, 'rgba(255,255,0,0.8)');
+                gradient.addColorStop(1, 'rgba(255,255,0,0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, powerUp.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw power-up icon
+                ctx.font = `${powerUp.size * 0.8}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 if (powerUp.type === 'speed') {
                     ctx.fillStyle = 'blue';
-                    ctx.fillText('⚡', powerUp.x, powerUp.y);
+                    ctx.fillText('⚡', 0, 0);
                 } else if (powerUp.type === 'shield') {
                     ctx.fillStyle = 'gold';
-                    ctx.fillText('🛡️', powerUp.x, powerUp.y);
+                    ctx.fillText('🛡️', 0, 0);
                 }
+                ctx.restore();
             });
         }
 
         function drawCoins() {
             coins.forEach(coin => {
+                ctx.save();
+                ctx.translate(coin.x, coin.y);
+                ctx.rotate((Date.now() % 3600) / 3600 * Math.PI * 2); // Rotate over time
                 ctx.fillStyle = 'yellow';
                 ctx.beginPath();
-                ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
+                ctx.arc(0, 0, coin.size, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = 'orange';
                 ctx.stroke();
+                ctx.restore();
             });
         }
 
         function drawEnemies() {
             enemies.forEach(enemy => {
+                ctx.save();
+                ctx.translate(enemy.x, enemy.y);
                 if (enemy.isConfused) {
                     ctx.fillStyle = 'purple';
                 } else if (enemy.isFast) {
@@ -443,8 +474,9 @@
                     ctx.fillStyle = enemy.health > 1 ? 'darkred' : 'red';
                 }
                 ctx.beginPath();
-                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.arc(0, 0, enemy.size, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.restore();
             });
         }
 
@@ -571,7 +603,7 @@
         }
 
         function moveEnemies() {
-            enemies.forEach(enemy => {
+            enemies.forEach((enemy, index) => {
                 if (enemy.isConfused) {
                     enemy.confusionTimer--;
                     if (enemy.confusionTimer <= 0) {
@@ -580,13 +612,39 @@
                     return; // Skip movement
                 }
 
-                const dx = snail.x - enemy.x;
-                const dy = snail.y - enemy.y;
+                // Collision avoidance with other enemies
+                let avoidX = 0;
+                let avoidY = 0;
+                let neighborCount = 0;
+                enemies.forEach((otherEnemy, otherIndex) => {
+                    if (index !== otherIndex) {
+                        const dx = enemy.x - otherEnemy.x;
+                        const dy = enemy.y - otherEnemy.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < enemy.size + otherEnemy.size + 10) { // Add a buffer
+                            avoidX += dx / distance;
+                            avoidY += dy / distance;
+                            neighborCount++;
+                        }
+                    }
+                });
+
+                let dx = snail.x - enemy.x;
+                let dy = snail.y - enemy.y;
+                const distanceToSnail = Math.sqrt(dx * dx + dy * dy);
+
+                if (neighborCount > 0) {
+                    // Adjust direction to avoid other enemies
+                    dx += avoidX * 50; // Weight the avoidance
+                    dy += avoidY * 50;
+                }
+
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 if (distance > 0) {
-                    const newX = enemy.x + (dx / distance) * enemy.speed;
-                    const newY = enemy.y + (dy / distance) * enemy.speed;
+                    let speedFactor = enemy.speed / distance;
+                    const newX = enemy.x + dx * speedFactor;
+                    const newY = enemy.y + dy * speedFactor;
 
                     if (enemy.canPassThroughWalls) {
                         // Enemy can pass through walls
@@ -882,6 +940,7 @@
             if (gameState === 'gameOver') {
                 resetGame();
                 gameState = 'playing';
+                initializeLevel();
             } else if (gameState === 'levelComplete') {
                 gameState = 'playing';
                 initializeLevel();
@@ -1017,14 +1076,17 @@
                 } else if (gameState === 'gameOver') {
                     resetGame();
                     gameState = 'playing';
+                    initializeLevel();
                 } else if (gameState === 'start') {
                     resetGame();
                     gameState = 'playing';
+                    initializeLevel();
                 }
             }
         }
 
         snailImage.onload = function() {
+            initializeLevel(); // Ensure the level is initialized
             gameLoop();
         };
     </script>
