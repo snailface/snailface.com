@@ -3,76 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <title>Shell Game</title>
+    <!-- Mobile responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <style>
         body { 
             display: flex; 
             flex-direction: column;
             align-items: center; 
             margin: 0; 
-            background-color: #cbde5f; /* Updated website background color */
+            background-color: #cbde5f; /* Website background color */
+            overflow: hidden; /* Prevent scrolling */
         }
         #gameInfo {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 10px;
             font-size: 20px;
             text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #canvasContainer {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
         }
         canvas { 
             border: 2px solid #000; 
             outline: none; /* Remove outline when focused */
-            background-color: #f399b7; /* Updated game window (canvas) background color */
+            background-color: #f399b7; /* Game window (canvas) background color */
+            width: 100vw; /* Full viewport width */
+            height: calc(100vw * 0.75); /* Maintain aspect ratio (4:3) */
+            max-height: 75vh; /* Optional: prevent canvas from exceeding viewport height */
+            display: block;
         }
-        #touchControls {
-            margin: 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 60px);
-            grid-template-rows: repeat(3, 60px);
-            grid-gap: 5px;
-            user-select: none;
-        }
-        .control-button {
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-            text-align: center;
-            line-height: 60px;
-            background-color: #ddd;
-            border: 2px solid #aaa;
-            border-radius: 10px;
+        /* Joystick Styles */
+        #joystickContainer {
+            position: relative;
+            margin: 20px auto;
+            width: 150px;
+            height: 150px;
             touch-action: none;
         }
-        .control-button:active {
-            background-color: #bbb;
+        #joystickBase {
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
         }
-        #upButton { grid-column: 2; grid-row: 1; }
-        #leftButton { grid-column: 1; grid-row: 2; }
-        #downButton { grid-column: 2; grid-row: 3; }
-        #rightButton { grid-column: 3; grid-row: 2; }
-        #touchControls div:not(.control-button) {
-            width: 60px;
-            height: 60px;
+        #joystickArrows {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #joystickArrows::before {
+            content: '';
+            position: absolute;
+            width: 60%;
+            height: 60%;
+            background: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,0 45,10 50,5 55,10" fill="black" /><polygon points="50,100 45,90 50,95 55,90" fill="black" /><polygon points="0,50 10,45 5,50 10,55" fill="black" /><polygon points="100,50 90,45 95,50 90,55" fill="black" /></svg>') center/contain no-repeat;
+        }
+        #joystickKnob {
+            width: 50px;
+            height: 50px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            position: absolute;
+            left: calc(50% - 25px);
+            top: calc(50% - 25px);
+        }
+        /* Hide joystick on desktop */
+        @media (min-width: 800px) {
+            #joystickContainer {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
     <div id="gameInfo">
         Level: <span id="levelDisplay">1</span> &nbsp; | &nbsp;
+        Objective: <span id="objectiveDisplay"></span> &nbsp; | &nbsp;
         Shells: <span id="shellsDisplay">0/5 (0 remaining)</span> &nbsp; | &nbsp;
         Hearts: <span id="heartsDisplay">❤️❤️❤️</span> &nbsp; | &nbsp;
         Score: <span id="scoreDisplay">0</span>
     </div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <!-- Touch Controls -->
-    <div id="touchControls">
-        <div></div>
-        <div class="control-button" id="upButton">▲</div>
-        <div></div>
-        <div class="control-button" id="leftButton">◀</div>
-        <div></div>
-        <div class="control-button" id="rightButton">▶</div>
-        <div></div>
-        <div class="control-button" id="downButton">▼</div>
-        <div></div>
+    <div id="canvasContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+    <!-- Joystick Container -->
+    <div id="joystickContainer">
+        <div id="joystickBase">
+            <div id="joystickArrows"></div>
+            <div id="joystickKnob"></div>
+        </div>
     </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -84,11 +113,14 @@
         // Set the aspect ratio based on the actual dimensions of the snail SVG
         const snailAspectRatio = 520 / 363; // Replace 520 and 363 with your image's width and height
 
+        const gameWidth = 800; // Fixed game width
+        const gameHeight = 600; // Fixed game height
+
         const snail = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
+            x: gameWidth / 2,
+            y: gameHeight / 2,
             size: 40,
-            speed: 5, // Adjusted speed for better control on touch devices
+            speed: 5, // Consistent speed
             dx: 0,
             dy: 0,
             canPassThroughWall: false, // New flag to allow passing through walls when stuck
@@ -114,13 +146,34 @@
         let blinkToggle = true;
         let blinkInterval;
 
+        // Level objectives
+        const levelObjectives = {
+            1: 'Collect 5 shells to proceed.',
+            2: 'Beware of the enemies!',
+            3: 'Watch out for more enemies.',
+            4: 'Enemies are getting faster.',
+            5: 'Walls have appeared!',
+            6: 'Navigate through the maze.',
+            7: 'Enemies can pass through walls!',
+            8: 'Big enemies ahead!',
+            9: 'Enemies are invulnerable!',
+            10: 'Survive the onslaught!'
+        };
+
+        // Since CSS handles the canvas scaling, no need to adjust canvas size via JavaScript
+        function resizeCanvas() {
+            // No scaling needed
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Initial call
+
         function createShell() {
             let shell;
             let attempts = 0;
             do {
                 shell = {
-                    x: Math.random() * (canvas.width - 30) + 15,
-                    y: Math.random() * (canvas.height - 30) + 15,
+                    x: Math.random() * (gameWidth - 30) + 15,
+                    y: Math.random() * (gameHeight - 30) + 15,
                     size: 15,
                     blastRadius: snail.size * 1.5,
                     type: Math.random() < 0.33 ? 'green' : 'normal' // 1/3 chance for green shell
@@ -144,12 +197,12 @@
         }
 
         function createEnemy(isBig = false, sizeMultiplier = 1) {
-            const safeDistance = Math.max(canvas.width, canvas.height) / 2;
+            const safeDistance = Math.max(gameWidth, gameHeight) / 2;
             let x, y;
 
             do {
-                x = Math.random() * canvas.width;
-                y = Math.random() * canvas.height;
+                x = Math.random() * gameWidth;
+                y = Math.random() * gameHeight;
             } while (Math.sqrt((x - snail.x)**2 + (y - snail.y)**2) < safeDistance);
 
             return { 
@@ -157,8 +210,8 @@
                 size: (isBig ? 30 : 15) * sizeMultiplier, 
                 speed: (isBig ? snail.speed / 2 : snail.speed / 1.5),
                 health: isBig ? 2 : 1,
-                invulnerable: level > 10, // Enemies are invulnerable after level 10
-                canPassThroughWalls: level > 10, // Enemies can pass through walls after level 10
+                invulnerable: level > 9, // Enemies are invulnerable after level 9
+                canPassThroughWalls: level > 6, // Enemies can pass through walls after level 6
                 isConfused: false, // Enemy confusion state
                 confusionTimer: 0 // Timer for confusion duration
             };
@@ -166,17 +219,17 @@
 
         function createWall() {
             const isVertical = Math.random() < 0.5;
-            const maxLength = isVertical ? canvas.height / 5 : canvas.width / 5;
+            const maxLength = isVertical ? gameHeight / 5 : gameWidth / 5;
             const length = Math.random() * maxLength + maxLength / 2;
             let x, y;
 
             if (isVertical) {
-                x = Math.random() * (canvas.width - 10);
-                y = Math.random() * (canvas.height - length);
+                x = Math.random() * (gameWidth - 10);
+                y = Math.random() * (gameHeight - length);
                 return { x, y, width: 10, height: length };
             } else {
-                x = Math.random() * (canvas.width - length);
-                y = Math.random() * (canvas.height - 10);
+                x = Math.random() * (gameWidth - length);
+                y = Math.random() * (gameHeight - 10);
                 return { x, y, width: length, height: 10 };
             }
         }
@@ -189,8 +242,8 @@
             }
             enemies = [];
             if (level > 1) {
-                if (level > 10) {
-                    // After Level 10, only one enemy per level, 3 times bigger
+                if (level > 7) {
+                    // After Level 7, big enemies appear
                     enemies.push(createEnemy(true, 3));
                 } else {
                     for (let i = 0; i < Math.min(level - 1, 4); i++) {
@@ -198,13 +251,13 @@
                     }
                 }
             }
-            if (level > 5) {
+            if (level > 4) {
                 walls = [];
-                for (let i = 0; i < level - 5; i++) {
+                for (let i = 0; i < level - 4; i++) {
                     walls.push(createWall());
                 }
             } else {
-                walls = []; // Ensure walls are reset if level <= 5
+                walls = []; // Ensure walls are reset if level <= 4
             }
             balls = []; // Reset balls
             collectedShells = 0;
@@ -212,8 +265,8 @@
 
             // Place the snail at a random position not overlapping any wall
             do {
-                snail.x = Math.random() * (canvas.width - snail.size) + snail.size / 2;
-                snail.y = Math.random() * (canvas.height - snail.size) + snail.size / 2;
+                snail.x = Math.random() * (gameWidth - snail.size) + snail.size / 2;
+                snail.y = Math.random() * (gameHeight - snail.size) + snail.size / 2;
             } while (isSnailOverlappingWall());
 
             // Reset the canPassThroughWall flag
@@ -231,6 +284,9 @@
 
             // Update GUI at the start of the level
             updateGUI();
+
+            // Display level objective
+            displayLevelObjective();
         }
 
         function isSnailOverlappingWall() {
@@ -326,11 +382,16 @@
             document.getElementById('scoreDisplay').textContent = score;
         }
 
+        function displayLevelObjective() {
+            const objective = levelObjectives[level] || 'Proceed to the next level.';
+            document.getElementById('objectiveDisplay').textContent = objective;
+        }
+
         function drawButton() {
             buttonWidth = 300;
             buttonHeight = 60;
-            buttonX = (canvas.width - buttonWidth) / 2;
-            buttonY = canvas.height / 2 + 70;
+            buttonX = (gameWidth - buttonWidth) / 2;
+            buttonY = gameHeight / 2 + 70;
 
             // Button background
             ctx.fillStyle = '#4CAF50';
@@ -341,20 +402,20 @@
             ctx.font = '30px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(buttonText, canvas.width / 2, buttonY + buttonHeight / 2);
+            ctx.fillText(buttonText, gameWidth / 2, buttonY + buttonHeight / 2);
         }
 
         function drawStartScreen() {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
 
             ctx.fillStyle = 'white';
             ctx.font = '50px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Snailface Shell Game', canvas.width / 2, canvas.height / 2 - 80);
+            ctx.fillText('Snailface Shell Game', gameWidth / 2, gameHeight / 2 - 80);
             ctx.font = '30px Arial';
-            ctx.fillText('Collect shells and avoid enemies!', canvas.width / 2, canvas.height / 2 - 30);
+            ctx.fillText('Collect shells and avoid enemies!', gameWidth / 2, gameHeight / 2 - 30);
 
             buttonText = 'Start Game';
             drawButton();
@@ -362,15 +423,15 @@
 
         function drawLevelComplete() {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
 
             ctx.fillStyle = 'white';
             ctx.font = '40px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(`Level ${level - 1} Completed!`, canvas.width / 2, canvas.height / 2 - 40);
+            ctx.fillText(`Level ${level - 1} Completed!`, gameWidth / 2, gameHeight / 2 - 40);
             ctx.font = '30px Arial';
-            ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+            ctx.fillText(`Score: ${score}`, gameWidth / 2, gameHeight / 2 + 10);
 
             buttonText = 'Continue to Next Level';
             drawButton();
@@ -378,14 +439,14 @@
 
         function gameOverScreen() {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
             ctx.fillStyle = 'white';
             ctx.font = '40px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2 - 40);
+            ctx.fillText('Game Over!', gameWidth / 2, gameHeight / 2 - 40);
             ctx.font = '30px Arial';
-            ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+            ctx.fillText(`Final Score: ${score}`, gameWidth / 2, gameHeight / 2 + 10);
 
             buttonText = 'Restart Game';
             drawButton();
@@ -414,10 +475,10 @@
             }
 
             // Wrap around the edges
-            if (snail.x < 0) snail.x = canvas.width;
-            if (snail.x > canvas.width) snail.x = 0;
-            if (snail.y < 0) snail.y = canvas.height;
-            if (snail.y > canvas.height) snail.y = 0;
+            if (snail.x < 0) snail.x = gameWidth;
+            if (snail.x > gameWidth) snail.x = 0;
+            if (snail.y < 0) snail.y = gameHeight;
+            if (snail.y > gameHeight) snail.y = 0;
         }
 
         function moveEnemies() {
@@ -457,10 +518,10 @@
                 }
 
                 // Wrap around the edges
-                if (enemy.x < 0) enemy.x = canvas.width;
-                if (enemy.x > canvas.width) enemy.x = 0;
-                if (enemy.y < 0) enemy.y = canvas.height;
-                if (enemy.y > canvas.height) enemy.y = 0;
+                if (enemy.x < 0) enemy.x = gameWidth;
+                if (enemy.x > gameWidth) enemy.x = 0;
+                if (enemy.y < 0) enemy.y = gameHeight;
+                if (enemy.y > gameHeight) enemy.y = 0;
             });
         }
 
@@ -471,8 +532,8 @@
 
                 // Remove balls that are off-screen
                 if (
-                    ball.x < 0 || ball.x > canvas.width ||
-                    ball.y < 0 || ball.y > canvas.height
+                    ball.x < 0 || ball.x > gameWidth ||
+                    ball.y < 0 || ball.y > gameHeight
                 ) {
                     balls.splice(index, 1);
                 }
@@ -559,8 +620,8 @@
                             } else {
                                 // Reset the snail's position
                                 do {
-                                    snail.x = canvas.width / 2;
-                                    snail.y = canvas.height / 2;
+                                    snail.x = gameWidth / 2;
+                                    snail.y = gameHeight / 2;
                                 } while (isSnailOverlappingWall());
 
                                 // Set invincibility after losing a heart
@@ -648,7 +709,7 @@
         }
 
         function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, gameWidth, gameHeight);
 
             if (gameState === 'start') {
                 drawStartScreen();
@@ -737,60 +798,80 @@
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
-        // Touch Controls
-        const upButton = document.getElementById('upButton');
-        const downButton = document.getElementById('downButton');
-        const leftButton = document.getElementById('leftButton');
-        const rightButton = document.getElementById('rightButton');
+        // Joystick Controls
+        const joystickContainer = document.getElementById('joystickContainer');
+        const joystickKnob = document.getElementById('joystickKnob');
+        const joystickBase = document.getElementById('joystickBase');
+        let joystickActive = false;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
 
-        function handleTouchStart(direction) {
-            if (gameState === 'playing') {
-                switch(direction) {
-                    case 'up': snail.dy = -snail.speed; break;
-                    case 'down': snail.dy = snail.speed; break;
-                    case 'left': snail.dx = -snail.speed; break;
-                    case 'right': snail.dx = snail.speed; break;
-                }
+        joystickBase.addEventListener('touchstart', handleJoystickStart, { passive: false });
+        joystickBase.addEventListener('touchmove', handleJoystickMove, { passive: false });
+        joystickBase.addEventListener('touchend', handleJoystickEnd);
+        joystickBase.addEventListener('touchcancel', handleJoystickEnd);
+        joystickBase.addEventListener('mousedown', handleJoystickStart);
+        joystickBase.addEventListener('mousemove', handleJoystickMove);
+        joystickBase.addEventListener('mouseup', handleJoystickEnd);
+        joystickBase.addEventListener('mouseleave', handleJoystickEnd);
+
+        function handleJoystickStart(event) {
+            event.preventDefault();
+            joystickActive = true;
+            if (event.touches) {
+                const touch = event.touches[0];
+                joystickStartX = touch.clientX;
+                joystickStartY = touch.clientY;
+            } else {
+                joystickStartX = event.clientX;
+                joystickStartY = event.clientY;
             }
         }
 
-        function handleTouchEnd(direction) {
-            switch(direction) {
-                case 'up':
-                case 'down': snail.dy = 0; break;
-                case 'left':
-                case 'right': snail.dx = 0; break;
+        function handleJoystickMove(event) {
+            if (!joystickActive) return;
+            event.preventDefault();
+            let clientX, clientY;
+            if (event.touches) {
+                const touch = event.touches[0];
+                clientX = touch.clientX;
+                clientY = touch.clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
             }
+
+            const rect = joystickBase.getBoundingClientRect();
+            const baseCenterX = rect.left + rect.width / 2;
+            const baseCenterY = rect.top + rect.height / 2;
+
+            const deltaX = clientX - baseCenterX;
+            const deltaY = clientY - baseCenterY;
+
+            const maxDistance = rect.width / 2 - 25; // Max distance the knob can move
+            let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const angle = Math.atan2(deltaY, deltaX);
+
+            if (distance > maxDistance) {
+                distance = maxDistance;
+            }
+
+            // Move the joystick knob
+            const knobX = Math.cos(angle) * distance;
+            const knobY = Math.sin(angle) * distance;
+            joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+            // Set snail movement
+            snail.dx = (knobX / maxDistance) * snail.speed;
+            snail.dy = (knobY / maxDistance) * snail.speed;
         }
 
-        upButton.addEventListener('touchstart', () => handleTouchStart('up'));
-        upButton.addEventListener('touchend', () => handleTouchEnd('up'));
-        upButton.addEventListener('mousedown', () => handleTouchStart('up'));
-        upButton.addEventListener('mouseup', () => handleTouchEnd('up'));
-        upButton.addEventListener('mouseleave', () => handleTouchEnd('up'));
-
-        downButton.addEventListener('touchstart', () => handleTouchStart('down'));
-        downButton.addEventListener('touchend', () => handleTouchEnd('down'));
-        downButton.addEventListener('mousedown', () => handleTouchStart('down'));
-        downButton.addEventListener('mouseup', () => handleTouchEnd('down'));
-        downButton.addEventListener('mouseleave', () => handleTouchEnd('down'));
-
-        leftButton.addEventListener('touchstart', () => handleTouchStart('left'));
-        leftButton.addEventListener('touchend', () => handleTouchEnd('left'));
-        leftButton.addEventListener('mousedown', () => handleTouchStart('left'));
-        leftButton.addEventListener('mouseup', () => handleTouchEnd('left'));
-        leftButton.addEventListener('mouseleave', () => handleTouchEnd('left'));
-
-        rightButton.addEventListener('touchstart', () => handleTouchStart('right'));
-        rightButton.addEventListener('touchend', () => handleTouchEnd('right'));
-        rightButton.addEventListener('mousedown', () => handleTouchStart('right'));
-        rightButton.addEventListener('mouseup', () => handleTouchEnd('right'));
-        rightButton.addEventListener('mouseleave', () => handleTouchEnd('right'));
-
-        // Prevent scrolling when touching the controls
-        document.getElementById('touchControls').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        });
+        function handleJoystickEnd(event) {
+            joystickActive = false;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+            snail.dx = 0;
+            snail.dy = 0;
+        }
 
         // Event listener for mouse clicks on the canvas
         canvas.addEventListener('mousedown', handleCanvasClick);
@@ -801,6 +882,10 @@
             let rect = canvas.getBoundingClientRect();
             let x = (e.clientX || e.touches[0].clientX) - rect.left;
             let y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            // Adjust x and y according to canvas scaling
+            x *= gameWidth / rect.width;
+            y *= gameHeight / rect.height;
 
             if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
                 if (gameState === 'levelComplete') {
