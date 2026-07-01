@@ -8,6 +8,7 @@
     <title>snailface.com - welcome</title>
     <link href="/style.css" type="text/css" crossorigin="anonymous" rel="stylesheet" />
     <link rel="shortcut icon" href="/snailface.ico" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <meta content="website" property="og:type" />
     <meta content="https://snailface.com/" property="og:url" />
     <meta content="/eye.jpg" property="og:image" />
@@ -38,14 +39,14 @@
   <aside>
     <div class="aside-section aside-left">
       <div class="aside-content">
-        <p> welcome to <strong>snailface</strong> - feel free to post a <strong>message</strong> after the <strong>beep</strong>.</p>
+        <p> welcome to <strong>snailface</strong> - feel free to post a <strong>message</strong> after the <strong>beep</strong>... or <a href="/snailface-dash.html" class="inline-link">play snailface dash</a>.</p>
       </div>
     </div>
     <div class="aside-section aside-right">
       <ul class="aside-list">
         <li class="aside-anchor">a means of interaction</li>
-        
-        <form name="contact" method="POST" action="/thank-you" netlify>
+
+        <form method="POST" action="/api/contact">
           <li class="form-item">
             <label class="aside-anchor"">your name <br> <input type="text" name="name" class="form-input" placeholder="your name" required/></label>
           </li>
@@ -54,6 +55,9 @@
           </li>
           <li class="form-item">
             <label class="aside-anchor">your message <br> <textarea name="message" class="form-textarea" placeholder="what do you want to say?" required></textarea></label>
+          </li>
+          <li class="form-item">
+            <div class="cf-turnstile" data-sitekey="YOUR_TURNSTILE_SITE_KEY"></div>
           </li>
           <li class="form-item">
             <button type="submit" class="button">post</button>
@@ -66,27 +70,5 @@
     </div>
   </aside>
 </main>
-<script>
-  document.getElementById('contact-form').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent the default form submit
-
-    var form = this;
-    var data = new FormData(form);
-
-    fetch('/', {
-      method: 'POST',
-      body: data
-    }).then(() => {
-      // Show the success message
-      document.getElementById('success-message').style.display = 'block';
-      // Optionally, hide or reset the form
-      // form.style.display = 'none';
-      // form.reset();
-    }).catch(() => {
-      // Handle errors if required
-      alert('There was an error submitting the form. Please try again.');
-    });
-  });
-</script>
 </body>
 </html>
