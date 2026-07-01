@@ -425,5 +425,16 @@ textarea.form-textarea {
 }
 .form-input::placeholder, .form-textarea::placeholder {
   color: white;
-  opacity: 1; 
+  opacity: 1;
+}
+.cf-turnstile-wrap {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 24em;
+  border: 3px dashed white;
+  padding: 7px 10px;
+  overflow: hidden;
+}
+.cf-turnstile-wrap .cf-turnstile {
+  width: 100%;
 }

@@ -84,7 +84,7 @@ export async function onRequestPost(context) {
           from: RESEND_FROM,
           to: [NOTIFY_TO],
           reply_to: email,
-          subject: `New message from ${name}`,
+          subject: `Snailface.com submitted message by ${name}`,
           text: `From: ${name} <${email}>\n\n${message}`,
         }),
       });
