@@ -2,8 +2,20 @@
 // Falls back to the ambient CSS "look around" animation (defined inside
 // eye.svg) whenever the user isn't actively moving the mouse/finger.
 //
-// Requires eye.svg to be embedded via <object> (not a CSS background-image),
-// since that's the only way this script can reach into its DOM.
+// eye.svg is fetched and injected directly into the page (inline SVG)
+// rather than embedded via <object>. Testing (see Cloud Four's SVG
+// icon stress test) shows <object>/<iframe> embedding of SVG has
+// dramatically worse rendering performance than inline SVG, because it
+// creates a whole separate nested browsing context/document. That extra
+// overhead, combined with this SVG's size (~950 paths), is a likely
+// contributor to reports of the page crashing on mobile Safari. Inlining
+// also lets this script touch the real DOM directly instead of going
+// through object.contentDocument.
+//
+// eye.svg's internal <style> block scopes all of its selectors under
+// #eye-svg so its (deliberately short, single-letter) class names like
+// .B/.C/.D can't collide with anything elsewhere on the page now that
+// they live in the same document instead of an isolated one.
 //
 // Perf note: eye.svg has ~525 individually clip-path/masked elements sharing
 // the pupil/bubble/vein animation classes. Earlier versions of this script
@@ -20,33 +32,60 @@
   var reduceMotion =
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduceMotion) return;
 
-  var obj = document.querySelector(".background-image object");
-  if (!obj) return;
+  var container = document.querySelector(".background-image");
+  if (!container) return;
 
   var MAX_X = 60;
   var MAX_Y = 45;
   var IDLE_DELAY = 2400;
   var CHASE_EASE = 0.18;
   var RELEASE_EASE = 0.12;
-  var started = false;
 
-  function init() {
-    if (started) return;
-    var svgDoc = obj.contentDocument;
-    if (!svgDoc || !svgDoc.documentElement) return;
-    var pupilPartsCheck = svgDoc.querySelectorAll(".pupil-part");
-    if (!pupilPartsCheck.length) return;
-    started = true;
+  fetch("/eye.svg?v=4")
+    .then(function (res) {
+      if (!res.ok) throw new Error("eye.svg fetch failed: " + res.status);
+      return res.text();
+    })
+    .then(function (svgText) {
+      container.innerHTML = svgText;
+      var root = container.querySelector("svg");
+      if (!root) return;
+      // Make sure the injected SVG stays decorative/non-interactive to
+      // assistive tech and doesn't intercept pointer events meant for the
+      // page (matches the old <object aria-hidden tabindex="-1"> setup).
+      root.setAttribute("aria-hidden", "true");
+      root.setAttribute("focusable", "false");
+      root.style.pointerEvents = "none";
 
-    var root = svgDoc.documentElement;
+      if (!reduceMotion) initInteraction(root);
+    })
+    .catch(function () {
+      // If the fetch fails for any reason, fail quietly: the page still
+      // works, it just won't have the eye graphic or its interaction.
+    });
 
+  function initInteraction(root) {
     var current = { x: 0, y: 0 };
     var target = { x: 0, y: 0 };
     var mode = "idle"; // "idle" | "active" | "releasing"
     var idleTimer = null;
     var raf = null;
+
+    // Browsers automatically throttle/stop requestAnimationFrame in hidden
+    // tabs, but CSS keyframe animations (the ambient "look around" loop)
+    // keep running by default even when the tab is backgrounded or the
+    // phone is locked. On mobile that's wasted CPU/battery for an effect
+    // nobody can see. eye.svg has a scoped rule
+    // (#eye-svg.page-hidden * { animation-play-state: paused }) that this
+    // toggles via the Page Visibility API.
+    document.addEventListener("visibilitychange", function () {
+      root.classList.toggle("page-hidden", document.hidden);
+      if (document.hidden && raf) {
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    });
 
     function setVar(name, value) {
       root.style.setProperty(name, value);
@@ -128,7 +167,7 @@
     }
 
     function updateFromPoint(clientX, clientY) {
-      var rect = obj.getBoundingClientRect();
+      var rect = container.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       var cx = rect.left + rect.width / 2;
       var cy = rect.top + rect.height / 2;
@@ -166,19 +205,4 @@
       { passive: true }
     );
   }
-
-  obj.addEventListener("load", init);
-
-  // Fallback: the <object>'s own load event can fire before this (deferred)
-  // script attaches its listener, especially once eye.svg is cached. Poll
-  // briefly until the embedded SVG is actually parseable.
-  var pollAttempts = 0;
-  (function poll() {
-    if (started) return;
-    init();
-    if (started) return;
-    pollAttempts++;
-    if (pollAttempts > 100) return; // ~10s
-    setTimeout(poll, 100);
-  })();
 })();
