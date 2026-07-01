@@ -17,8 +17,12 @@
 // .B/.C/.D can't collide with anything elsewhere on the page now that
 // they live in the same document instead of an isolated one.
 //
-// Perf note: eye.svg has ~525 individually clip-path/masked elements sharing
-// the pupil/bubble/vein animation classes. Earlier versions of this script
+// Perf note (v5): eye.svg's ~525 pupil elements are wrapped in a handful of
+// .pupil-part-group <g>s, and the shared clip-path (.B) is hoisted onto those
+// groups (plus onto <g class="B"> wrappers around large static runs) instead
+// of sitting on every child. That cuts per-frame animated/clipped nodes from
+// ~525 to ~22 and per-paint clip evaluations from ~925 to ~46 — the previous
+// structure hung/crashed mobile browsers. Earlier versions of this script
 // wrote an inline `transform` to every one of those elements on every
 // animation frame (~525 style writes x 60fps), which was heavy enough to
 // hang/crash some browsers. Instead, this version sets a handful of CSS
@@ -42,7 +46,7 @@
   var CHASE_EASE = 0.18;
   var RELEASE_EASE = 0.12;
 
-  fetch("/eye.svg?v=4")
+  fetch("/eye.svg?v=6")
     .then(function (res) {
       if (!res.ok) throw new Error("eye.svg fetch failed: " + res.status);
       return res.text();
