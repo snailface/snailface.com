@@ -46,7 +46,7 @@
   var CHASE_EASE = 0.18;
   var RELEASE_EASE = 0.12;
 
-  fetch("/eye.svg?v=6")
+  fetch("/eye.svg?v=7")
     .then(function (res) {
       if (!res.ok) throw new Error("eye.svg fetch failed: " + res.status);
       return res.text();
@@ -90,6 +90,9 @@
         raf = null;
       }
     });
+    // visibilitychange doesn't fire for the initial state, so a tab that
+    // loads in the background would otherwise run its animations unseen.
+    root.classList.toggle("page-hidden", document.hidden);
 
     function setVar(name, value) {
       root.style.setProperty(name, value);
