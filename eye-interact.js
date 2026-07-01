@@ -46,7 +46,7 @@
   var CHASE_EASE = 0.18;
   var RELEASE_EASE = 0.12;
 
-  fetch("/eye.svg?v=7")
+  fetch("/eye.svg?v=8")
     .then(function (res) {
       if (!res.ok) throw new Error("eye.svg fetch failed: " + res.status);
       return res.text();
