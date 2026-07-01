@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css?family=Montserrat');
+/* Montserrat is loaded via <link> in the HTML <head> (with preconnect +
+   display=swap) instead of an @import here. A CSS @import blocks the
+   stylesheet from applying until the font CSS is fetched, adding a
+   render-blocking request chain on every page load. */
 
 * { margin: 0; padding: 0; }
 .footer, #footer {
@@ -476,6 +479,37 @@ textarea.form-textarea {
   .button {
     font-size: 1.4em;
     padding: 0.3em 0.7em;
+  }
+  .menu-toggle {
+    width: clamp(3.6em, 15vw, 4.6em);
+    height: clamp(3.6em, 15vw, 4.6em);
+    margin: 16px;
+    background-color: rgba(243, 153, 183, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  }
+  input[type="checkbox"]:checked ~ .menu-toggle {
+    background-color: rgba(243, 153, 183, 0.6);
+  }
+  .bar {
+    width: clamp(2em, 9vw, 2.6em);
+    height: 0.28em;
+  }
+  .bar.top {
+    transform: translate(-50%, calc(-50% - 0.65em));
+  }
+  .bar.bottom {
+    transform: translate(-50%, calc(-50% + 0.65em));
+  }
+  .bar.bottom::after {
+    width: 0.44em;
+    height: 0.44em;
+    bottom: -0.58em;
+  }
+  input[type="checkbox"]:checked ~ .menu-toggle .bar.top {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  input[type="checkbox"]:checked ~ .menu-toggle .bar.bottom {
+    transform: translate(-50%, -50%) rotate(-45deg);
   }
 }
 @media only screen and (min-width: 1001px) {
