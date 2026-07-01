@@ -32,14 +32,16 @@
     <span> </span>
   </h1>
   <input type="checkbox" id="myInput">
-  <label for="myInput">
+  <label for="myInput" class="menu-toggle">
       <span class="bar top"></span>
       <span class="bar middle"></span>
       <span class="bar bottom"></span>
     </label>
   <aside>
     <div class="aside-section aside-left">
+      <img src="home.svg" class="aside-art-left" alt="" aria-hidden="true" />
       <div class="aside-content">
+        <p class="aside-eyebrow">hey&nbsp;you.</p>
         <p> welcome to <strong>snailface</strong> - feel free to post a <strong>message</strong> after the <strong>beep</strong>... or play a <a href="/snailface-dash.html" class="inline-link">snail's pace race</a>.</p>
       </div>
     </div>
@@ -49,7 +51,7 @@
 
         <form method="POST" action="/api/contact">
           <li class="form-item">
-            <label class="aside-anchor"">your name <br> <input type="text" name="name" class="form-input" placeholder="your name" required/></label>
+            <label class="aside-anchor">your name <br> <input type="text" name="name" class="form-input" placeholder="your name" required/></label>
           </li>
           <li class="form-item">
             <label class="aside-anchor">your email <br> <input type="email" name="email" class="form-input" placeholder="your email" required/></label>
@@ -57,16 +59,15 @@
           <li class="form-item">
             <label class="aside-anchor">your message <br> <textarea name="message" class="form-textarea" placeholder="what do you want to say?" required></textarea></label>
           </li>
-          <li class="form-item">
+          <li class="form-item form-actions">
             <div class="cf-turnstile-wrap">
               <div class="cf-turnstile" data-sitekey="0x4AAAAAADtqrf0Ea07WfWBo" data-theme="light" data-size="flexible"></div>
             </div>
-          </li>
-          <li class="form-item">
             <button type="submit" class="button">post</button>
           </li>
         </form>
       </ul>
+      <img src="snail.svg" class="aside-mascot" alt="" aria-hidden="true" />
     </div>
     <div class="footer">
       © <script>document.write(new Date().getFullYear())</script>.

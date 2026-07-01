@@ -105,7 +105,7 @@ aside {
   height: 100%;
   min-height: 0;
   min-width: 0;
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 .aside-left {
@@ -125,7 +125,6 @@ aside {
   transform-origin: right center;
   transition: transform 0.6s cubic-bezier(.34, 1.56, .64, 1),
     border-radius 0.6s cubic-bezier(.34, 1.56, .64, 1);
-  overflow-y: auto;
 }
 .aside-art-left {
   position: absolute;
@@ -141,15 +140,14 @@ aside {
   z-index: 0;
 }
 .aside-mascot {
-  position: static;
-  display: block;
-  right: auto;
-  bottom: auto;
+  position: absolute;
+  right: clamp(0.5em, 4vw, 1.6em);
+  bottom: clamp(0.4em, 3vw, 1em);
   width: clamp(64px, 11vw, 130px);
-  margin: 1.5em clamp(1.2em, 4vw, 2em) 1.5em auto;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
   transform-origin: bottom center;
   animation: mascotWiggle 3.6s ease-in-out infinite;
+  z-index: 1;
   pointer-events: none;
 }
 @keyframes mascotWiggle {
@@ -276,7 +274,7 @@ input[type="checkbox"]:checked ~ aside .aside-right {
    numbers duplicated across three separate media queries, which
    both fought each other in the cascade and only lined up into a
    proper X at specific widths.) */
-.menu-toggle {
+label {
   display: block;
   width: clamp(2.4em, 6vw, 2.9em);
   height: clamp(2.4em, 6vw, 2.9em);
@@ -291,10 +289,10 @@ input[type="checkbox"]:checked ~ aside .aside-right {
   left: 0;
   transition: transform 0.25s ease, background-color 0.3s ease;
 }
-.menu-toggle:hover {
+label:hover {
   transform: scale(1.08);
 }
-input[type="checkbox"]:checked ~ .menu-toggle {
+input[type="checkbox"]:checked ~ label {
   background-color: rgba(243, 153, 183, 0.38);
 }
 .bar {
@@ -314,32 +312,32 @@ input[type="checkbox"]:checked ~ .menu-toggle {
 .bar.bottom {
   transform: translate(-50%, calc(-50% + 0.5em));
 }
-.bar.bottom::after {
+.bar::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -0.45em;
-  width: 0.35em;
-  height: 0.35em;
+  bottom: -0.35em;
+  width: 0.4em;
+  height: 0.4em;
   border-radius: 50%;
   background-color: inherit;
   transform: translateX(-50%);
   opacity: 0.85;
   transition: opacity 0.3s ease;
 }
-input[type="checkbox"]:checked ~ .menu-toggle .bar {
+input[type="checkbox"]:checked ~ label .bar {
   background-color: #fff;
 }
-input[type="checkbox"]:checked ~ .menu-toggle .bar.bottom::after {
+input[type="checkbox"]:checked ~ label .bar::after {
   opacity: 0;
 }
-input[type="checkbox"]:checked ~ .menu-toggle .bar.top {
+input[type="checkbox"]:checked ~ label .bar.top {
   transform: translate(-50%, -50%) rotate(45deg);
 }
-input[type="checkbox"]:checked ~ .menu-toggle .bar.middle {
+input[type="checkbox"]:checked ~ label .bar.middle {
   opacity: 0;
 }
-input[type="checkbox"]:checked ~ .menu-toggle .bar.bottom {
+input[type="checkbox"]:checked ~ label .bar.bottom {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 h1 {
@@ -359,31 +357,21 @@ h1 span {
 p {
   font-size: clamp(1rem, 2.6vw, 30px);
 }
-.form-actions {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  gap: 0.75em;
-  margin-top: 1.75em;
-}
 .button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  flex: 1 1 auto;
-  min-width: 5em;
-  text-align: center;
+  display: inline-block;
   background-image: none;
   border: none;
   background-color: transparent;
+  padding-bottom: 7px;
   border: 3px dashed #fff;
   position: relative;
   cursor: pointer;
-  font-size: 1.8em;
-  padding: 0.35em 0.9em;
-  margin: 0;
+  font-size: 5.55em;
+  padding: 0.25em;
+  margin-right: 1em;
+  margin-top: 0.25em;
   color: white;
+  float: right;
 }
 .button:hover {
   color: #cbde5f;
@@ -419,17 +407,14 @@ textarea.form-textarea {
 }
 .cf-turnstile-wrap {
   box-sizing: border-box;
-  flex: 0 1 260px;
-  min-width: 0;
+  width: 100%;
   max-width: 24em;
   border: 3px dashed white;
   padding: 7px 10px;
   overflow: hidden;
 }
-.cf-turnstile-wrap .cf-turnstile,
-.cf-turnstile-wrap iframe {
+.cf-turnstile-wrap .cf-turnstile {
   width: 100%;
-  max-width: 100%;
 }
 
 /* ============================================================
@@ -448,7 +433,7 @@ textarea.form-textarea {
   }
   aside {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(170px, 46%) minmax(0, 1fr);
+    grid-template-rows: minmax(150px, 42%) minmax(0, 1fr);
   }
   .aside-left {
     border-bottom-left-radius: 60px;
@@ -471,16 +456,6 @@ textarea.form-textarea {
   }
   .aside-mascot {
     width: clamp(50px, 16vw, 90px);
-  }
-  .form-actions {
-    gap: 0.5em;
-  }
-  .cf-turnstile-wrap {
-    flex-basis: 200px;
-  }
-  .button {
-    font-size: 1.4em;
-    padding: 0.3em 0.7em;
   }
 }
 @media only screen and (min-width: 1001px) {

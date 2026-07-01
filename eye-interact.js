@@ -4,6 +4,16 @@
 //
 // Requires eye.svg to be embedded via <object> (not a CSS background-image),
 // since that's the only way this script can reach into its DOM.
+//
+// Perf note: eye.svg has ~525 individually clip-path/masked elements sharing
+// the pupil/bubble/vein animation classes. Earlier versions of this script
+// wrote an inline `transform` to every one of those elements on every
+// animation frame (~525 style writes x 60fps), which was heavy enough to
+// hang/crash some browsers. Instead, this version sets a handful of CSS
+// custom properties on the SVG root each frame; a small set of CSS rules in
+// eye.svg (".manual-look .pupil-part" etc.) read those via var(), so the
+// browser only has to recompute style for the elements that actually match,
+// and the JS side only ever touches one element per frame.
 (function () {
   "use strict";
 
@@ -20,7 +30,6 @@
   var IDLE_DELAY = 2400;
   var CHASE_EASE = 0.18;
   var RELEASE_EASE = 0.12;
-  var ANIM_PHASE_ZERO = 3400; // ms: matches eye.svg's shared animation-delay (0% keyframe)
   var started = false;
 
   function init() {
@@ -31,13 +40,7 @@
     if (!pupilPartsCheck.length) return;
     started = true;
 
-    var pupilParts = svgDoc.querySelectorAll(".pupil-part");
-    var bubbles = svgDoc.querySelectorAll(".eye-bubble");
-    var whiteCircles = svgDoc.querySelectorAll(".white-circle");
-    var veins = svgDoc.querySelectorAll(".vein-react");
-    if (!pupilParts.length) return;
-
-    var groups = [pupilParts, bubbles, whiteCircles, veins];
+    var root = svgDoc.documentElement;
 
     var current = { x: 0, y: 0 };
     var target = { x: 0, y: 0 };
@@ -45,77 +48,44 @@
     var idleTimer = null;
     var raf = null;
 
-    function forEachGroup(fn) {
-      for (var g = 0; g < groups.length; g++) {
-        var list = groups[g];
-        for (var i = 0; i < list.length; i++) fn(list[i], g);
-      }
-    }
-
-    function setPaused(paused) {
-      forEachGroup(function (el) {
-        el.style.animationPlayState = paused ? "paused" : "running";
-      });
-    }
-
-    function clearInline() {
-      forEachGroup(function (el) {
-        el.style.transform = "";
-      });
-    }
-
-    function resetAnimPhase() {
-      forEachGroup(function (el) {
-        var anims = el.getAnimations ? el.getAnimations() : [];
-        for (var k = 0; k < anims.length; k++) {
-          anims[k].currentTime = ANIM_PHASE_ZERO;
-        }
-      });
+    function setVar(name, value) {
+      root.style.setProperty(name, value);
     }
 
     function apply() {
       var nx = current.x / MAX_X;
       var ny = current.y / MAX_Y;
 
-      var pupilT =
-        "translate(" + current.x.toFixed(1) + "px," + current.y.toFixed(1) + "px)";
-      for (var i = 0; i < pupilParts.length; i++) {
-        pupilParts[i].style.transform = pupilT;
-      }
+      setVar("--lx", current.x.toFixed(1) + "px");
+      setVar("--ly", current.y.toFixed(1) + "px");
 
       // Blue bubbles (upper-left): dodge as pupil approaches that corner.
       var bubbleAmt = Math.max(0, Math.min(1, (-nx + -ny) / 2));
-      var bubbleT =
-        "translate(" +
-        (-bubbleAmt * 18).toFixed(1) +
-        "px," +
-        (-bubbleAmt * 14).toFixed(1) +
-        "px) scale(" +
-        (1 - bubbleAmt * 0.1).toFixed(3) +
-        ")";
-      for (var j = 0; j < bubbles.length; j++) bubbles[j].style.transform = bubbleT;
+      setVar("--blx", (-bubbleAmt * 18).toFixed(1) + "px");
+      setVar("--bly", (-bubbleAmt * 14).toFixed(1) + "px");
+      setVar("--bs", (1 - bubbleAmt * 0.1).toFixed(3));
 
       // White circle outlines (lower-right): dodge as pupil approaches that corner.
       var wcAmt = Math.max(0, Math.min(1, (nx + ny) / 2));
-      var wcT =
-        "translate(" +
-        (wcAmt * 13).toFixed(1) +
-        "px," +
-        (wcAmt * 10).toFixed(1) +
-        "px) scale(" +
-        (1 - wcAmt * 0.08).toFixed(3) +
-        ")";
-      for (var k = 0; k < whiteCircles.length; k++) whiteCircles[k].style.transform = wcT;
+      setVar("--wlx", (wcAmt * 13).toFixed(1) + "px");
+      setVar("--wly", (wcAmt * 10).toFixed(1) + "px");
+      setVar("--ws", (1 - wcAmt * 0.08).toFixed(3));
 
       // Veins (either side): squeeze in the same left/right direction as the pupil.
-      var veinDx = nx * 9;
-      var veinScale = 1 - Math.min(1, Math.abs(nx)) * 0.04;
-      var veinT =
-        "translate(" + veinDx.toFixed(1) + "px,0) scaleX(" + veinScale.toFixed(3) + ")";
-      for (var m = 0; m < veins.length; m++) veins[m].style.transform = veinT;
+      setVar("--vlx", (nx * 9).toFixed(1) + "px");
+      setVar("--vs", (1 - Math.min(1, Math.abs(nx)) * 0.04).toFixed(3));
     }
 
-    function tick() {
+    var FRAME_INTERVAL = 33; // ~30fps cap; plenty smooth for eye-tracking, half the work of 60fps
+    var lastTick = 0;
+
+    function tick(now) {
+      if (now - lastTick < FRAME_INTERVAL) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      lastTick = now;
+
       if (mode === "active") {
         current.x += (target.x - current.x) * CHASE_EASE;
         current.y += (target.y - current.y) * CHASE_EASE;
@@ -130,9 +100,12 @@
         } else {
           current.x = 0;
           current.y = 0;
-          clearInline();
-          resetAnimPhase();
-          setPaused(false);
+          // Dropping the "manual-look" class hands control back to the
+          // ambient CSS keyframes, which restart cleanly from 0% since the
+          // per-element `animation` property is going from `none` back to
+          // a live animation name (no per-element currentTime bookkeeping
+          // needed, unlike the old inline-style approach).
+          root.classList.remove("manual-look");
           mode = "idle";
           raf = null;
         }
@@ -142,7 +115,7 @@
     }
 
     function enterActive() {
-      if (mode === "idle") setPaused(true);
+      if (mode === "idle") root.classList.add("manual-look");
       mode = "active";
       if (!raf) raf = requestAnimationFrame(tick);
     }
