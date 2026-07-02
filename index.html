@@ -10,9 +10,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
-    <link href="/style.css?v=4" type="text/css" rel="stylesheet" />
+    <link href="/style.css?v=10" type="text/css" rel="stylesheet" />
     <link rel="shortcut icon" href="/snailface.ico" />
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <!-- Start the eye download immediately instead of waiting for
+         eye-interact.js to run. crossorigin="anonymous" matches fetch()'s
+         default mode:"cors" credentials:"same-origin" so the preloaded
+         response is reused rather than downloaded twice. -->
+    <link rel="preload" href="/eye.svg?v=8" as="fetch" crossorigin="anonymous" />
+    <!-- Turnstile is lazy-loaded by the inline script at the end of <body>:
+         the contact form is invisible until the menu opens, so the widget
+         script doesn't belong in the critical path. -->
     <script src="/eye-interact.js?v=7" defer></script>
     <meta content="website" property="og:type" />
     <meta content="https://snailface.com/" property="og:url" />
@@ -29,7 +36,7 @@
 <body>
   <div class="background-image" aria-hidden="true" tabindex="-1"></div>
 
-    <img src="logo.svg" width="300" height="400" decoding="async" alt="snailface logo" />
+    <img src="logo.svg?v=3" width="300" height="400" decoding="async" alt="snailface logo" />
 
     <main>
   <h1>
@@ -43,7 +50,7 @@
     </label>
   <aside>
     <div class="aside-section aside-left">
-      <img src="home.svg" class="aside-art-left" alt="" aria-hidden="true" width="1382" height="1286" loading="lazy" decoding="async" />
+      <img src="home.svg?v=2" class="aside-art-left" alt="" aria-hidden="true" width="1382" height="1286" loading="lazy" decoding="async" />
       <div class="aside-content">
         <p class="aside-eyebrow">hey&nbsp;you.</p>
         <p> welcome to <strong>snailface</strong> - feel free to post a <strong>message</strong> after the <strong>beep</strong>... or play a <a href="/snailface-dash.html" class="inline-link">snail's pace race</a>.</p>
@@ -71,12 +78,44 @@
           </li>
         </form>
       </ul>
-      <img src="snail.svg" class="aside-mascot" alt="" aria-hidden="true" width="463" height="187" loading="lazy" decoding="async" />
+      <!-- Wrapper carries the wiggle animation, the img carries the
+           drop-shadow filter. With both on one element (the old setup)
+           Safari re-runs the filter every animation frame; split apart,
+           the filtered snail is rendered once and the wrapper's transform
+           is composited on the GPU. Visual result is identical. -->
+      <div class="aside-mascot">
+        <img src="snail.svg" alt="" aria-hidden="true" width="463" height="187" loading="lazy" decoding="async" />
+      </div>
     </div>
     <div class="footer">
-      © <script>document.write(new Date().getFullYear())</script>.
+      © <span id="footer-year">2026</span>.
     </div>
   </aside>
 </main>
+<script>
+  // Footer year without document.write (which blocks the parser).
+  document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+  // Lazy-load Cloudflare Turnstile the first time the menu is opened —
+  // the contact form (and its widget) is invisible until then.
+  (function () {
+    var input = document.getElementById("myInput");
+    var loaded = false;
+    function loadTurnstile() {
+      if (loaded) return;
+      loaded = true;
+      var s = document.createElement("script");
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    if (input) {
+      input.addEventListener("change", loadTurnstile);
+      if (input.checked) loadTurnstile();
+    } else {
+      loadTurnstile();
+    }
+  })();
+</script>
 </body>
 </html>

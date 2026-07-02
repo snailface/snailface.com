@@ -78,6 +78,10 @@ body {
   background-size: contain;
   padding-top: 5px;
   padding-bottom: 5px;
+  /* Without border-box the 5px paddings make body 100%+10px tall, which
+     gives iOS Safari a scrollable overflow that can shove the open menu
+     partly above the visual viewport. */
+  box-sizing: border-box;
 }
 main {
   height: 100%;
@@ -89,18 +93,31 @@ img {
   right: 2em;
   bottom: 1px;
   width: 15em;
+  /* Keep the intrinsic aspect ratio: without this, the width override
+     fights the HTML height attribute and the image skews. */
+  height: auto;
 }
 aside {
   position: absolute;
-  inset: 0;
+  /* Explicit offsets instead of `inset: 0` — inset is unsupported before
+     iOS 14.5, and an unpositioned aside breaks the whole menu layout. */
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   grid-template-columns: minmax(300px, 38%) minmax(0, 1fr);
-  grid-template-rows: 100%;
+  /* fr instead of a percentage row: WebKit has long-standing bugs
+     resolving %-based grid track/item heights. */
+  grid-template-rows: minmax(0, 1fr);
   z-index: 2;
 }
 .aside-section {
   position: relative;
-  height: 100%;
+  /* No height: 100% — grid items stretch to fill their row by default,
+     and %-height grid items resolve against the wrong box in WebKit
+     (the whole grid instead of the row), which made the green panel
+     cover the entire screen on iPhone. */
   min-height: 0;
   min-width: 0;
   overflow-y: hidden;
@@ -138,6 +155,10 @@ aside {
   mix-blend-mode: multiply;
   z-index: 0;
 }
+/* Wiggle animation lives on the wrapper; the drop-shadow filter lives on
+   the <img> inside. On a single element Safari re-evaluates the filter
+   every animation frame — split, the filtered snail rasterizes once and
+   the wrapper's transform animation is composited on the GPU. */
 .aside-mascot {
   position: static;
   display: block;
@@ -145,10 +166,17 @@ aside {
   bottom: auto;
   width: clamp(64px, 11vw, 130px);
   margin: 1.5em clamp(1.2em, 4vw, 2em) 1.5em auto;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
   transform-origin: bottom center;
   animation: mascotWiggle 3.6s ease-in-out infinite;
+  will-change: transform;
   pointer-events: none;
+}
+.aside-mascot img {
+  display: block;
+  position: static;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
 }
 @keyframes mascotWiggle {
   0%, 100% { transform: rotate(-4deg) translateY(0); }
@@ -434,6 +462,11 @@ textarea.form-textarea {
    RESPONSIVE OVERRIDES (narrow -> wide, all after base rules)
    ============================================================ */
 @media only screen and (max-width: 1000px) {
+  /* Corner logo: 15em desktop size covers too much of a phone screen. */
+  body > img {
+    width: clamp(7.5em, 32.5vw, 12.5em);
+    right: 1em;
+  }
   .background-image {
     position: fixed;
     width: 100%;
@@ -446,7 +479,9 @@ textarea.form-textarea {
   }
   aside {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(170px, 46%) minmax(0, 1fr);
+    /* 46/54 split via fr units (with a 170px floor) rather than a
+       percentage max — same proportions, no WebKit % quirks. */
+    grid-template-rows: minmax(170px, 46fr) minmax(0, 54fr);
   }
   .aside-left {
     border-bottom-left-radius: 60px;
@@ -464,7 +499,9 @@ textarea.form-textarea {
     animation-name: slimeRiseIn;
   }
   .aside-content {
-    margin-top: 10px;
+    /* Clear the fixed close (X) button: its box is clamp(3.6em,15vw,4.6em)
+       + 16px margin, so start the text below that zone. */
+    margin-top: clamp(68px, 17vw, 92px);
     padding: 0 20px;
   }
   .aside-mascot {
