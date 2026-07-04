@@ -46,7 +46,7 @@
   var CHASE_EASE = 0.18;
   var RELEASE_EASE = 0.12;
 
-  fetch("/eye.svg?v=8")
+  fetch("/eye.svg?v=18")
     .then(function (res) {
       if (!res.ok) throw new Error("eye.svg fetch failed: " + res.status);
       return res.text();
@@ -98,6 +98,19 @@
       root.style.setProperty(name, value);
     }
 
+    // Reads the offset the ambient CSS "look around" keyframes have
+    // currently landed on, so switching into manual tracking can pick up
+    // from there instead of snapping to (0,0) for one frame.
+    function ambientOffset() {
+      var el = root.querySelector(".pupil-part-group, .pupil-part");
+      if (!el) return { x: 0, y: 0 };
+      var t = getComputedStyle(el).transform;
+      var m = t && t.match(/^matrix(3d)?\(([^)]+)\)$/);
+      if (!m) return { x: 0, y: 0 };
+      var v = m[2].split(",").map(Number);
+      return m[1] ? { x: v[12] || 0, y: v[13] || 0 } : { x: v[4] || 0, y: v[5] || 0 };
+    }
+
     function apply() {
       var nx = current.x / MAX_X;
       var ny = current.y / MAX_Y;
@@ -117,9 +130,26 @@
       setVar("--wly", (wcAmt * 10).toFixed(1) + "px");
       setVar("--ws", (1 - wcAmt * 0.08).toFixed(3));
 
-      // Veins (either side): squeeze in the same left/right direction as the pupil.
-      setVar("--vlx", (nx * 9).toFixed(1) + "px");
-      setVar("--vs", (1 - Math.min(1, Math.abs(nx)) * 0.04).toFixed(3));
+      // Eyelid assembly (pink rim + veins + green scaly lid): one shared
+      // offset so the rim can never pull away from the lid and reveal a
+      // white gap between them. Amplitude stays under the black ink
+      // linework's width so nothing visibly detaches from its outlines.
+      setVar("--vlx", (nx * 4).toFixed(1) + "px");
+      setVar("--vly", (ny * 3).toFixed(1) + "px");
+
+      // Whole-face lean: shifts the entire SVG (fills AND the fused black
+      // ink layer together) toward the gaze via the .background-image svg
+      // transform in style.css. Registration-safe at any amplitude, so it
+      // carries the bulk of the eyelid/outline motion.
+      setVar("--fx", (nx * 6).toFixed(1) + "px");
+      setVar("--fy", (ny * 4).toFixed(1) + "px");
+
+      // The biggest lid scales additionally sway toward the gaze, each
+      // pivoting about its own center, on top of the assembly offset —
+      // kept small so the combined travel stays within the ink lines.
+      setVar("--bwx", (nx * 3).toFixed(1) + "px");
+      setVar("--bwy", (ny * 2).toFixed(1) + "px");
+      setVar("--bwr", (nx * 1.2).toFixed(2) + "deg");
     }
 
     var FRAME_INTERVAL = 33; // ~30fps cap; plenty smooth for eye-tracking, half the work of 60fps
@@ -161,7 +191,13 @@
     }
 
     function enterActive() {
-      if (mode === "idle") root.classList.add("manual-look");
+      if (mode === "idle") {
+        var off = ambientOffset();
+        current.x = off.x;
+        current.y = off.y;
+        apply();
+        root.classList.add("manual-look");
+      }
       mode = "active";
       if (!raf) raf = requestAnimationFrame(tick);
     }
@@ -186,8 +222,12 @@
       scheduleIdle();
     }
 
+    // Pointer Events cover mouse, touch, and pen through one code path
+    // instead of three separate listeners, so a hybrid device (e.g. a
+    // touchscreen laptop) can't double-fire updates from both mouse and
+    // touch for the same physical input.
     window.addEventListener(
-      "mousemove",
+      "pointermove",
       function (e) {
         updateFromPoint(e.clientX, e.clientY);
       },
@@ -195,19 +235,21 @@
     );
 
     window.addEventListener(
-      "touchmove",
+      "pointerdown",
       function (e) {
-        var t = e.touches && e.touches[0];
-        if (t) updateFromPoint(t.clientX, t.clientY);
+        updateFromPoint(e.clientX, e.clientY);
       },
       { passive: true }
     );
 
-    window.addEventListener(
-      "touchstart",
-      function (e) {
-        var t = e.touches && e.touches[0];
-        if (t) updateFromPoint(t.clientX, t.clientY);
+    // A real gaze relaxes as soon as it loses its target, not 2.4s later.
+    // When the pointer actually leaves the page (vs. just holding still
+    // over it), skip the idle wait and start releasing immediately.
+    document.documentElement.addEventListener(
+      "pointerleave",
+      function () {
+        clearTimeout(idleTimer);
+        if (mode === "active") mode = "releasing";
       },
       { passive: true }
     );

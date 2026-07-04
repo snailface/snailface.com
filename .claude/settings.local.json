@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rmdir /Users/whey/Documents/GitHub/snailface.com/.claude)",
+      "Bash(git -C /Users/whey/Documents/GitHub/snailface.com status --short)"
+    ]
+  }
+}

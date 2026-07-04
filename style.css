@@ -25,7 +25,12 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  /* --fx/--fy: whole-face "lean" toward the cursor, set by eye-interact.js.
+     Because the entire artwork (including the single fused black-ink
+     linework layer) moves as one, this adds eyelid/outline motion with no
+     risk of fills sliding out from under their outlines — unlike per-layer
+     offsets inside the SVG, which are capped at a few px for that reason. */
+  transform: translate(calc(-50% + var(--fx, 0px)), calc(-50% + var(--fy, 0px)));
   pointer-events: none;
   border: 0;
 }
