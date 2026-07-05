@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>snailface.com - snail trail map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
+  <link rel="shortcut icon" href="/snailface.ico" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f399b7;
+      font-family: "Montserrat", sans-serif;
+      color: #00545e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 18px 24px 10px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    header img { height: 64px; width: auto; }
+
+    h1 {
+      font-size: 1.6em;
+      color: #76ced9;
+      -webkit-text-stroke: 1.5px #00545e;
+      letter-spacing: 1px;
+    }
+
+    .tagline { font-size: .85em; font-weight: bold; }
+
+    #map {
+      flex: 1;
+      min-height: 62vh;
+      margin: 0 24px;
+      border: 6px solid #00545e;
+      border-radius: 30px 42px 34px 46px / 40px 30px 44px 32px; /* wobbly, snail-slime blob */
+      box-shadow: 0 10px 0 #00a8ad;
+      background: #00a8ad;
+    }
+
+    /* True two-color basemap via SVG duotone (a plain CSS filter can only
+       shift everything into one hue family): grayscale, a hard contrast
+       stretch that separates CARTO's near-white land from its gray water,
+       then a table mapping dark->snailface teal, light->snailface green. */
+    .leaflet-tile { filter: url(#snailtone); }
+
+    .snail-pin { background: none; border: none; }
+
+    .snail-pin img {
+      width: 100%;
+      display: block;
+      filter: drop-shadow(2px 3px 0 rgba(0, 84, 94, .5));
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #f399b7;
+      border: 3px solid #00545e;
+      border-radius: 18px 26px 20px 28px / 24px 18px 26px 20px;
+      color: #00545e;
+      font-family: "Montserrat", sans-serif;
+    }
+
+    .leaflet-popup-tip { background: #76ced9; border: 2px solid #00545e; }
+
+    .post-popup { max-width: 240px; }
+
+    .post-popup .post-title {
+      font-weight: bold;
+      font-size: 1.15em;
+    }
+
+    .post-popup .post-place { font-size: .8em; margin-bottom: 2px; }
+
+    .post-popup .post-rating {
+      color: #00545e;
+      font-size: .85em;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .post-popup .post-desc { font-size: .82em; margin-bottom: 8px; }
+
+    .post-popup .post-photos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .post-popup .post-photos img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      display: block;
+      border: 3px solid #00545e;
+      border-radius: 10px;
+      cursor: zoom-in;
+    }
+
+    .post-popup .post-photos img:only-child { width: 200px; height: auto; }
+
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 84, 94, .82);
+      cursor: zoom-out;
+      padding: 4vh 4vw;
+    }
+
+    #lightbox.open { display: flex; }
+
+    #lightbox img {
+      max-width: 100%;
+      max-height: 84vh;
+      border: 6px solid #f399b7;
+      border-radius: 18px 26px 20px 28px / 24px 18px 26px 20px;
+      box-shadow: 0 10px 0 #00a8ad;
+      background: #fdfdfd;
+    }
+
+    #lightbox .lb-name {
+      position: absolute;
+      bottom: 3vh;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #f399b7;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+
+    footer {
+      padding: 12px 24px 18px;
+      font-size: .85em;
+      font-weight: bold;
+    }
+
+    footer a { color: #00545e; text-decoration-color: #76ced9; }
+
+    #lost-snails { margin-top: 4px; color: #00545e; }
+    #lost-snails span { color: #d71920; }
+  </style>
+</head>
+
+<body>
+  <!-- Duotone filter used by .leaflet-tile: dark pixels -> teal #00a8ad,
+       light pixels -> green #cbde5f. The linear transfer first stretches
+       contrast so water (light gray on CARTO tiles) lands on the dark/teal
+       side while land (near-white) stays on the light/green side. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="snailtone" color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="6" intercept="-4.9" />
+        <feFuncG type="linear" slope="6" intercept="-4.9" />
+        <feFuncB type="linear" slope="6" intercept="-4.9" />
+      </feComponentTransfer>
+      <feComponentTransfer>
+        <feFuncR type="table" tableValues="0 0.796" />
+        <feFuncG type="table" tableValues="0.659 0.871" />
+        <feFuncB type="table" tableValues="0.678 0.373" />
+      </feComponentTransfer>
+    </filter>
+  </svg>
+
+  <header>
+    <a href="/"><img src="logo.svg?v=3" alt="snailface logo" /></a>
+    <div>
+      <h1>snail trail map</h1>
+      <p class="tagline">everywhere the snail has oozed. posts pin themselves by their photos' GPS tags.</p>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <div id="lightbox" role="dialog" aria-label="photo preview">
+    <img src="" alt="" />
+    <div class="lb-name"></div>
+  </div>
+
+  <footer>
+    <a href="/">&larr; back to the eye</a>
+    <div id="lost-snails"></div>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/exifr@7.1.3/dist/lite.umd.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var map = L.map("map", { worldCopyJump: true }).setView([48, 8], 4);
+      // CARTO's flat light basemap takes the duotone filter cleanly
+      // (plain OSM tiles have too many competing colors to unify).
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        subdomains: "abcd",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      }).addTo(map);
+
+      // snail.svg is 463x187 (~2.5:1); anchor at the snail's belly.
+      var snailIcon = L.divIcon({
+        className: "snail-pin",
+        html: '<img src="/snail.svg" alt="" />',
+        iconSize: [60, 24],
+        iconAnchor: [30, 22],
+        popupAnchor: [0, -22]
+      });
+
+      var lightbox = document.getElementById("lightbox");
+      var lightboxImg = lightbox.querySelector("img");
+      var lightboxName = lightbox.querySelector(".lb-name");
+
+      document.getElementById("map").addEventListener("click", function (e) {
+        var img = e.target.closest && e.target.closest(".post-photos img");
+        if (!img) return;
+        lightboxImg.src = img.getAttribute("data-full") || img.src;
+        lightboxName.textContent = img.getAttribute("data-name") || "";
+        lightbox.classList.add("open");
+      });
+
+      lightbox.addEventListener("click", function () {
+        lightbox.classList.remove("open");
+        lightboxImg.src = "";
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") lightbox.classList.remove("open");
+      });
+
+      // Minimal parser for the Jekyll front-matter subset these posts use:
+      // scalar `key: value` lines and one-level `- item` lists. The body
+      // below the closing --- is the description.
+      function parsePost(text) {
+        var m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+        if (!m) return null;
+        var fm = {};
+        var listKey = null;
+        m[1].split(/\r?\n/).forEach(function (line) {
+          var item = line.match(/^\s+-\s+(.+)$/);
+          if (item && listKey) { fm[listKey].push(item[1].trim()); return; }
+          var kv = line.match(/^(\w+):\s*(.*)$/);
+          if (!kv) return;
+          if (kv[2] === "") { listKey = kv[1]; fm[listKey] = []; }
+          else { listKey = null; fm[kv[1]] = kv[2].trim(); }
+        });
+        fm.description = m[2].trim().replace(/\s+/g, " ");
+        return fm;
+      }
+
+      function esc(s) {
+        var d = document.createElement("div");
+        d.textContent = s || "";
+        return d.innerHTML;
+      }
+
+      function popupHtml(post) {
+        var snails = "";
+        var rating = parseFloat(post.rating);
+        if (isFinite(rating)) {
+          var n = Math.max(1, Math.min(5, Math.round(rating / 2)));
+          snails = new Array(n + 1).join("🐌") + " " + esc(post.rating) + "/10";
+        }
+        var thumbs = (post.photos || []).map(function (src) {
+          return '<img src="' + esc(src) + '" data-full="' + esc(src) +
+            '" data-name="' + esc(post.title) + '" alt="" loading="lazy" title="click to enlarge" />';
+        }).join("");
+        return '<div class="post-popup">' +
+          '<div class="post-title">' + esc(post.title) + '</div>' +
+          (post.place ? '<div class="post-place">' + esc(post.place) + '</div>' : '') +
+          (snails ? '<div class="post-rating">' + snails + '</div>' : '') +
+          (post.description ? '<div class="post-desc">' + esc(post.description) + '</div>' : '') +
+          '<div class="post-photos">' + thumbs + '</div>' +
+          '</div>';
+      }
+
+      // Pin location = first photo with GPS in its EXIF.
+      function locatePost(post) {
+        var photos = post.photos || [];
+        var chain = Promise.resolve(null);
+        photos.forEach(function (src) {
+          chain = chain.then(function (found) {
+            if (found) return found;
+            return exifr.gps(src).then(function (gps) {
+              return (gps && isFinite(gps.latitude) && isFinite(gps.longitude))
+                ? [gps.latitude, gps.longitude] : null;
+            }).catch(function () { return null; });
+          });
+        });
+        return chain;
+      }
+
+      var lost = [];
+      var placed = [];
+
+      // posts.json is the manifest of Jekyll posts to pin. Fetched with
+      // no-cache (and the .md files too) so newly added visits show up
+      // without waiting out the static host's cache TTL.
+      fetch("/map-photos/posts.json", { cache: "no-cache" })
+        .then(function (res) { return res.json(); })
+        .then(function (posts) {
+          return Promise.all(posts.map(function (path) {
+        return fetch(path, { cache: "no-cache" })
+          .then(function (res) {
+            if (!res.ok) throw new Error(path + ": " + res.status);
+            return res.text();
+          })
+          .then(function (text) {
+            var post = parsePost(text);
+            if (!post || !post.photos || !post.photos.length) { lost.push(path); return; }
+            return locatePost(post).then(function (coords) {
+              if (!coords) { lost.push(post.title || path); return; }
+              L.marker(coords, { icon: snailIcon })
+                .addTo(map)
+                .bindPopup(popupHtml(post));
+              placed.push(coords);
+            });
+          })
+          .catch(function () { lost.push(path); });
+          }));
+        })
+        .then(function () {
+        if (placed.length) {
+          map.fitBounds(L.latLngBounds(placed).pad(0.25), { maxZoom: 8 });
+        }
+        if (lost.length) {
+          document.getElementById("lost-snails").innerHTML =
+            "<span>lost snails</span> (no GPS found): " + lost.map(esc).join(", ");
+        }
+      });
+    })();
+  </script>
+</body>
+
+</html>
