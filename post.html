@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>snailface.com - snail trail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
+  <link rel="shortcut icon" href="/snailface.ico" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f399b7;
+      font-family: "Montserrat", sans-serif;
+      color: #00545e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    main { flex: 1; } /* pushes the flow footer to the bottom on short posts */
+
+    /* Footer in normal flow (not fixed) so it can't overlap the article. */
+    .page-footer { padding: 10px 24px 16px; }
+
+    .copyright {
+      display: inline-block;
+      background: #cbde5f;
+      color: #f399b7;
+      padding: 6px 12px;
+      border-radius: 12px 16px 12px 16px / 14px 12px 16px 12px;
+      font-weight: bold;
+      font-size: 1.05em;
+    }
+
+    header {
+      padding: 18px 24px 4px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header img { height: 56px; width: auto; }
+
+    .back {
+      color: #00545e;
+      text-decoration-color: #76ced9;
+      font-weight: bold;
+      font-size: .9em;
+    }
+
+    main {
+      max-width: 720px;
+      margin: 12px auto 60px;
+      padding: 0 24px;
+    }
+
+    .article-card {
+      background: #cbde5f;
+      border: 6px solid #00545e;
+      border-radius: 30px 42px 34px 46px / 40px 30px 44px 32px;
+      box-shadow: 0 10px 0 #00a8ad;
+      padding: 30px 34px 40px;
+    }
+
+    h1 {
+      font-size: 2.2em;
+      color: #76ced9;
+      -webkit-text-stroke: 1.5px #00545e;
+      letter-spacing: 1px;
+    }
+
+    .place { font-size: 1em; font-weight: bold; margin-top: 2px; }
+    .when { font-size: .85em; font-weight: bold; opacity: .7; margin: 2px 0 14px; }
+
+    .body p { margin-bottom: 12px; line-height: 1.55; }
+
+    .photos {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .photos img {
+      width: 100%;
+      display: block;
+      image-orientation: from-image; /* honor camera EXIF rotation on future photos */
+      border: 4px solid #00545e;
+      border-radius: 14px;
+      background: #fdfdfd;
+      cursor: zoom-in;
+    }
+
+    .missing { padding: 20px; font-weight: bold; }
+
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 84, 94, .82);
+      cursor: zoom-out;
+      padding: 4vh 4vw;
+    }
+
+    #lightbox.open { display: flex; }
+
+    #lightbox img {
+      max-width: 100%;
+      max-height: 92vh;
+      image-orientation: from-image;
+      border: 6px solid #f399b7;
+      border-radius: 18px 26px 20px 28px / 24px 18px 26px 20px;
+      box-shadow: 0 10px 0 #00a8ad;
+      background: #fdfdfd;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <a href="/"><img src="logo.svg?v=3" alt="snailface logo" /></a>
+    <a class="back" href="/map.html">&larr; back to the map</a>
+  </header>
+
+  <main id="main">
+    <div class="article-card"><div class="missing">loading the trail&hellip;</div></div>
+  </main>
+
+  <div id="lightbox" role="dialog" aria-label="photo preview">
+    <img src="" alt="" />
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var main = document.getElementById("main");
+      var lightbox = document.getElementById("lightbox");
+      var lightboxImg = lightbox.querySelector("img");
+
+      function esc(s) {
+        var d = document.createElement("div");
+        d.textContent = s || "";
+        return d.innerHTML;
+      }
+
+      // Same front-matter subset the map uses: scalar `key: value` lines and
+      // one-level `- item` lists, with the body below the closing --- .
+      function parsePost(text) {
+        var m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+        if (!m) return null;
+        var fm = {};
+        var listKey = null;
+        m[1].split(/\r?\n/).forEach(function (line) {
+          var item = line.match(/^\s+-\s+(.+)$/);
+          if (item && listKey) { fm[listKey].push(item[1].trim()); return; }
+          var kv = line.match(/^(\w+):\s*(.*)$/);
+          if (!kv) return;
+          if (kv[2] === "") { listKey = kv[1]; fm[listKey] = []; }
+          else { listKey = null; fm[kv[1]] = kv[2].trim(); }
+        });
+        fm.body = m[2].trim();
+        return fm;
+      }
+
+      function showMissing(msg) {
+        main.innerHTML = '<div class="article-card"><div class="missing">' +
+          esc(msg) + ' <a class="back" href="/map.html">&larr; back to the map</a></div></div>';
+      }
+
+      // Post date comes from the Jekyll filename (/_posts/YYYY-MM-DD-slug.md).
+      var MONTHS = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+
+      function dateLabelOf(p) {
+        var m = p.match(/(\d{4})-(\d{2})-(\d{2})/);
+        return m ? MONTHS[parseInt(m[2], 10) - 1] + " " + m[1] : "";
+      }
+
+      function render(post, postPath) {
+        document.title = "snailface.com - " + (post.title || "snail trail");
+        var paras = (post.body || "").split(/\n\s*\n/).filter(function (p) { return p.trim(); })
+          .map(function (p) { return "<p>" + esc(p.replace(/\s+/g, " ").trim()) + "</p>"; }).join("");
+        var photos = (post.photos || []).map(function (src) {
+          return '<img src="' + esc(src) + '" data-full="' + esc(src) +
+            '" alt="" title="click to enlarge" />';
+        }).join("");
+        var when = dateLabelOf(postPath);
+        main.innerHTML = '<div class="article-card">' +
+          '<h1>' + esc(post.title) + '</h1>' +
+          (post.place ? '<div class="place">' + esc(post.place) + '</div>' : '') +
+          (when ? '<div class="when">' + esc(when) + '</div>' : '') +
+          '<div class="body">' + paras + '</div>' +
+          '<div class="photos">' + photos + '</div>' +
+          '</div>';
+      }
+
+      // Which post to show. Only same-origin /_posts/*.md paths are allowed,
+      // so the query param can't point the fetch anywhere unexpected.
+      var params = new URLSearchParams(location.search);
+      var path = params.get("p") || "";
+      if (!/^\/_posts\/[\w.-]+\.md$/.test(path)) {
+        showMissing("that trail doesn't exist.");
+        return;
+      }
+
+      fetch(path, { cache: "no-cache" })
+        .then(function (res) {
+          if (!res.ok) throw new Error(res.status);
+          return res.text();
+        })
+        .then(function (text) {
+          var post = parsePost(text);
+          if (!post) { showMissing("that trail couldn't be read."); return; }
+          render(post, path);
+        })
+        .catch(function () { showMissing("that trail couldn't be found."); });
+
+      // Any photo opens the lightbox; clicking it (or Escape) closes it.
+      main.addEventListener("click", function (e) {
+        var img = e.target.closest && e.target.closest(".photos img");
+        if (!img) return;
+        lightboxImg.src = img.getAttribute("data-full") || img.src;
+        lightbox.classList.add("open");
+      });
+
+      lightbox.addEventListener("click", function () {
+        lightbox.classList.remove("open");
+        lightboxImg.src = "";
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          lightbox.classList.remove("open");
+          lightboxImg.src = "";
+        }
+      });
+    })();
+  </script>
+
+  <footer class="page-footer">
+    <span class="copyright">&copy; <script>document.write(new Date().getFullYear())</script>.</span>
+  </footer>
+</body>
+
+</html>

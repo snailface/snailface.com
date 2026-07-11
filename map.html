@@ -14,43 +14,173 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html, body { height: 100%; }
+
     body {
       background: #f399b7;
       font-family: "Montserrat", sans-serif;
       color: #00545e;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      overflow: hidden;
     }
 
-    header {
-      padding: 18px 24px 10px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    header img { height: 64px; width: auto; }
-
-    h1 {
-      font-size: 1.6em;
-      color: #76ced9;
-      -webkit-text-stroke: 1.5px #00545e;
-      letter-spacing: 1px;
-    }
-
-    .tagline { font-size: .85em; font-weight: bold; }
-
+    /* The map fills the whole screen; the title, nav and copyright ride on
+       top as overlays instead of taking their own strip above it. */
     #map {
-      flex: 1;
-      min-height: 62vh;
-      margin: 0 24px;
-      border: 6px solid #00545e;
-      border-radius: 30px 42px 34px 46px / 40px 30px 44px 32px; /* wobbly, snail-slime blob */
-      box-shadow: 0 10px 0 #00a8ad;
+      position: fixed;
+      inset: 0;
       background: #00a8ad;
     }
+
+    /* Overlay wrappers are click-through so the map stays draggable behind
+       them; only their pills/links catch pointer events. */
+    .overlay { position: fixed; z-index: 1000; pointer-events: none; }
+    .overlay > * { pointer-events: auto; }
+
+    /* Popups render above the header/footer overlays (z 1000) so a snail's
+       detail card is never hidden behind the chrome, even on the far edges. */
+    .leaflet-popup-pane { z-index: 1100; }
+
+    .map-header {
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .map-header > a img { height: 46px; width: auto; display: block; }
+
+    /* Apple-Maps-style search: just a bar; the options drop beneath on click. */
+    .search-wrap { position: relative; flex: 1; max-width: 420px; }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(203, 222, 95, .95);
+      border: 3px solid #00545e;
+      border-radius: 22px 26px 22px 26px / 24px 22px 26px 22px;
+      padding: 9px 14px;
+    }
+
+    .search-bar .mag { font-size: 15px; line-height: 1; }
+
+    #search-input {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: 0;
+      outline: none;
+      font-family: "Montserrat", sans-serif;
+      font-weight: bold;
+      font-size: .95em;
+      color: #00545e;
+    }
+
+    #search-input::placeholder { color: rgba(0, 84, 94, .55); }
+
+    .search-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: rgba(243, 153, 183, .97);
+      border: 3px solid #00545e;
+      border-radius: 16px 22px 16px 22px / 20px 16px 22px 16px;
+      padding: 10px 12px 12px;
+      max-height: 62vh;
+      overflow-y: auto;
+    }
+
+    .search-panel.open { display: block; }
+
+    .panel-label {
+      font-size: .68em;
+      font-weight: bold;
+      letter-spacing: .06em;
+      color: #00545e;
+      opacity: .75;
+      margin: 8px 0 5px;
+    }
+
+    .panel-label:first-child { margin-top: 0; }
+
+    #search-results { display: flex; flex-direction: column; gap: 4px; }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fdfdfd;
+      border: 2px solid #00545e;
+      border-radius: 10px 14px 10px 14px / 12px 10px 14px 10px;
+      padding: 6px 9px;
+      font-size: .8em;
+      font-weight: bold;
+      color: #00545e;
+      cursor: pointer;
+      text-align: left;
+      font-family: "Montserrat", sans-serif;
+      width: 100%;
+    }
+
+    .result-row:hover { background: #76ced9; }
+    .result-row .rr-place { font-weight: normal; opacity: .75; margin-left: auto; font-size: .9em; white-space: nowrap; }
+    .no-results { font-size: .78em; font-weight: bold; color: #00545e; opacity: .7; padding: 2px 2px 4px; }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+      font-family: "Montserrat", sans-serif;
+      font-weight: bold;
+      font-size: .72em;
+      color: #00545e;
+      background: #76ced9;
+      border: 2px solid #00545e;
+      border-radius: 10px 14px 10px 14px / 12px 10px 14px 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    /* Toggled-off chips fade out; their pins leave the map. */
+    .chip.off { background: transparent; opacity: .5; }
+
+    /* Country chips are radio-style: exactly one active (lime). */
+    .cchip {
+      font-family: "Montserrat", sans-serif;
+      font-weight: bold;
+      font-size: .72em;
+      color: #00545e;
+      background: transparent;
+      border: 2px solid #00545e;
+      border-radius: 10px 14px 10px 14px / 12px 10px 14px 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+      opacity: .6;
+    }
+
+    .cchip.active { background: #cbde5f; opacity: 1; }
+
+    .panel-foot { margin-top: 10px; }
+    .panel-foot a { color: #00545e; font-weight: bold; font-size: .78em; text-decoration-color: #76ced9; }
+
+    /* Category is shown by tinting the snail emblem itself (no badge).
+       food = the natural green snail; sights + sounds hue-rotate it toward
+       other snailface tones. A tiny version rides in chips/results too. */
+    .t-sights { filter: hue-rotate(80deg) saturate(1.25); }   /* teal snail */
+    .t-sounds { filter: hue-rotate(235deg) saturate(1.4); }   /* pink snail */
+
+    .tsnail {
+      height: 15px;
+      width: auto;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+
+    /* Nudge Leaflet's zoom control below the search bar. */
+    .leaflet-top.leaflet-left { top: 70px; }
 
     /* True two-color basemap via SVG duotone (a plain CSS filter can only
        shift everything into one hue family): grayscale, a hard contrast
@@ -66,6 +196,10 @@
       filter: drop-shadow(2px 3px 0 rgba(0, 84, 94, .5));
     }
 
+    /* Tint on the pin snail, keeping its drop-shadow. */
+    .snail-pin img.t-sights { filter: hue-rotate(80deg) saturate(1.25) drop-shadow(2px 3px 0 rgba(0, 84, 94, .5)); }
+    .snail-pin img.t-sounds { filter: hue-rotate(235deg) saturate(1.4) drop-shadow(2px 3px 0 rgba(0, 84, 94, .5)); }
+
     .leaflet-popup-content-wrapper {
       background: #f399b7;
       border: 3px solid #00545e;
@@ -76,85 +210,106 @@
 
     .leaflet-popup-tip { background: #76ced9; border: 2px solid #00545e; }
 
-    .post-popup { max-width: 240px; }
+    /* Leaflet's default close button hangs off the top-right corner, which
+       lands outside the bubble's rounded/wobbly border. Pull it inside and
+       give it a teal circle so it reads clearly on the pink card. */
+    .leaflet-popup-close-button {
+      top: 8px !important;
+      right: 8px !important;
+      width: 22px;
+      height: 22px;
+      padding: 0 !important;
+      font: bold 15px/20px "Montserrat", sans-serif !important;
+      color: #00545e !important;
+      background: #76ced9 !important;
+      border: 2px solid #00545e;
+      border-radius: 50%;
+      text-align: center;
+    }
+
+    .leaflet-popup-close-button:hover { background: #cbde5f !important; color: #00545e !important; }
+
+    /* Clear a strip above the photo so the close circle sits in its own
+       band of pink instead of overlapping the image corner. */
+    .leaflet-popup-content { margin-top: 36px; }
+
+    .post-popup { max-width: 220px; text-align: center; }
+
+    /* Fixed height (not max-height) so the popup has a known, uniform size
+       the instant it opens — before the photo finishes loading — which lets
+       Leaflet's autoPan place the whole card in view without a late reflow. */
+    .post-popup .popup-photo {
+      width: 190px;
+      height: 130px;
+      object-fit: cover;
+      image-orientation: from-image; /* honor camera EXIF rotation on future photos */
+      display: block;
+      border: 3px solid #00545e;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #fdfdfd;
+    }
 
     .post-popup .post-title {
       font-weight: bold;
       font-size: 1.15em;
+      margin-bottom: 2px;
     }
 
-    .post-popup .post-place { font-size: .8em; margin-bottom: 2px; }
+    .post-popup .post-date {
+      font-size: .75em;
+      font-weight: bold;
+      opacity: .7;
+      margin-bottom: 8px;
+    }
 
-    .post-popup .post-rating {
+    .post-popup .read-more {
+      display: inline-block;
+      padding: 5px 12px;
+      background: #76ced9;
       color: #00545e;
-      font-size: .85em;
+      border: 2px solid #00545e;
+      border-radius: 12px 16px 12px 16px / 14px 12px 16px 12px;
+      font-family: "Montserrat", sans-serif;
       font-weight: bold;
-      margin-bottom: 6px;
+      font-size: .8em;
+      text-decoration: none;
+      cursor: pointer;
     }
 
-    .post-popup .post-desc { font-size: .82em; margin-bottom: 8px; }
+    /* Brand copyright pill, overlaid bottom-left. */
+    .map-foot { bottom: 12px; left: 12px; }
 
-    .post-popup .post-photos {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .post-popup .post-photos img {
-      width: 70px;
-      height: 70px;
-      object-fit: cover;
-      display: block;
-      border: 3px solid #00545e;
-      border-radius: 10px;
-      cursor: zoom-in;
-    }
-
-    .post-popup .post-photos img:only-child { width: 200px; height: auto; }
-
-    #lightbox {
-      position: fixed;
-      inset: 0;
-      z-index: 2000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 84, 94, .82);
-      cursor: zoom-out;
-      padding: 4vh 4vw;
-    }
-
-    #lightbox.open { display: flex; }
-
-    #lightbox img {
-      max-width: 100%;
-      max-height: 84vh;
-      border: 6px solid #f399b7;
-      border-radius: 18px 26px 20px 28px / 24px 18px 26px 20px;
-      box-shadow: 0 10px 0 #00a8ad;
-      background: #fdfdfd;
-    }
-
-    #lightbox .lb-name {
-      position: absolute;
-      bottom: 3vh;
-      left: 0;
-      right: 0;
-      text-align: center;
+    .copyright {
+      background: #cbde5f;
       color: #f399b7;
+      border: 2px solid #00545e;
+      padding: 5px 12px;
+      border-radius: 12px 16px 12px 16px / 14px 12px 16px 12px;
       font-weight: bold;
-      font-size: 1.1em;
+      font-size: 1.05em;
     }
 
-    footer {
-      padding: 12px 24px 18px;
-      font-size: .85em;
+    /* Only appears when a post has no GPS; centered above the bottom edge. */
+    #lost-snails {
+      position: fixed;
+      z-index: 1000;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 80vw;
+      text-align: center;
+      font-size: .8em;
       font-weight: bold;
+      color: #00545e;
+      background: rgba(203, 222, 95, .92);
+      border: 2px solid #00545e;
+      border-radius: 10px;
+      padding: 4px 10px;
+      pointer-events: none;
     }
 
-    footer a { color: #00545e; text-decoration-color: #76ced9; }
-
-    #lost-snails { margin-top: 4px; color: #00545e; }
+    #lost-snails:empty { display: none; }
     #lost-snails span { color: #d71920; }
   </style>
 </head>
@@ -180,25 +335,35 @@
     </filter>
   </svg>
 
-  <header>
-    <a href="/"><img src="logo.svg?v=3" alt="snailface logo" /></a>
-    <div>
-      <h1>snail trail map</h1>
-      <p class="tagline">everywhere the snail has oozed. posts pin themselves by their photos' GPS tags.</p>
-    </div>
-  </header>
-
   <div id="map"></div>
 
-  <div id="lightbox" role="dialog" aria-label="photo preview">
-    <img src="" alt="" />
-    <div class="lb-name"></div>
+  <div class="overlay map-header">
+    <a href="/"><img src="logo.svg?v=3" alt="snailface logo" /></a>
+    <div class="search-wrap">
+      <div class="search-bar">
+        <span class="mag" aria-hidden="true">🔍</span>
+        <input id="search-input" type="text" placeholder="snail trail map" autocomplete="off" aria-label="search the snail trail" />
+      </div>
+      <div class="search-panel" id="search-panel">
+        <div id="search-results"></div>
+        <div class="panel-label">where</div>
+        <div class="chip-row" id="country-chips"></div>
+        <div class="panel-label">what</div>
+        <div class="chip-row">
+          <button class="chip" data-type="food"><img class="tsnail t-food" src="/snail.svg" alt="" />food</button>
+          <button class="chip" data-type="sights"><img class="tsnail t-sights" src="/snail.svg" alt="" />sights</button>
+          <button class="chip" data-type="sounds"><img class="tsnail t-sounds" src="/snail.svg" alt="" />sounds</button>
+        </div>
+        <div class="panel-foot"><a href="/">&larr; back to the eye</a></div>
+      </div>
+    </div>
   </div>
 
-  <footer>
-    <a href="/">&larr; back to the eye</a>
-    <div id="lost-snails"></div>
-  </footer>
+  <div class="overlay map-foot">
+    <span class="copyright">&copy; <script>document.write(new Date().getFullYear())</script>.</span>
+  </div>
+
+  <div id="lost-snails"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -216,35 +381,29 @@
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
       }).addTo(map);
 
+      // Category isn't a badge anymore — it's the color of the snail emblem
+      // itself (a CSS tint class, natural green for food).
+      var TYPES = ["food", "sights", "sounds"];
+
+      function typeClass(type) {
+        return TYPES.indexOf(type) !== -1 ? "t-" + type : "t-food";
+      }
+
+      // A small tinted snail for chips and search results.
+      function snailSwatch(type) {
+        return '<img class="tsnail ' + typeClass(type) + '" src="/snail.svg" alt="" />';
+      }
+
       // snail.svg is 463x187 (~2.5:1); anchor at the snail's belly.
-      var snailIcon = L.divIcon({
-        className: "snail-pin",
-        html: '<img src="/snail.svg" alt="" />',
-        iconSize: [60, 24],
-        iconAnchor: [30, 22],
-        popupAnchor: [0, -22]
-      });
-
-      var lightbox = document.getElementById("lightbox");
-      var lightboxImg = lightbox.querySelector("img");
-      var lightboxName = lightbox.querySelector(".lb-name");
-
-      document.getElementById("map").addEventListener("click", function (e) {
-        var img = e.target.closest && e.target.closest(".post-photos img");
-        if (!img) return;
-        lightboxImg.src = img.getAttribute("data-full") || img.src;
-        lightboxName.textContent = img.getAttribute("data-name") || "";
-        lightbox.classList.add("open");
-      });
-
-      lightbox.addEventListener("click", function () {
-        lightbox.classList.remove("open");
-        lightboxImg.src = "";
-      });
-
-      document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") lightbox.classList.remove("open");
-      });
+      function snailIcon(type) {
+        return L.divIcon({
+          className: "snail-pin",
+          html: '<img class="' + typeClass(type) + '" src="/snail.svg" alt="" />',
+          iconSize: [60, 24],
+          iconAnchor: [30, 22],
+          popupAnchor: [0, -22]
+        });
+      }
 
       // Minimal parser for the Jekyll front-matter subset these posts use:
       // scalar `key: value` lines and one-level `- item` lists. The body
@@ -262,7 +421,8 @@
           if (kv[2] === "") { listKey = kv[1]; fm[listKey] = []; }
           else { listKey = null; fm[kv[1]] = kv[2].trim(); }
         });
-        fm.description = m[2].trim().replace(/\s+/g, " ");
+        fm.body = m[2].trim();                          // full text, paragraphs kept
+        fm.description = fm.body.replace(/\s+/g, " ");   // one-line, for the popup
         return fm;
       }
 
@@ -272,23 +432,28 @@
         return d.innerHTML;
       }
 
-      function popupHtml(post) {
-        var snails = "";
-        var rating = parseFloat(post.rating);
-        if (isFinite(rating)) {
-          var n = Math.max(1, Math.min(5, Math.round(rating / 2)));
-          snails = new Array(n + 1).join("🐌") + " " + esc(post.rating) + "/10";
-        }
-        var thumbs = (post.photos || []).map(function (src) {
-          return '<img src="' + esc(src) + '" data-full="' + esc(src) +
-            '" data-name="' + esc(post.title) + '" alt="" loading="lazy" title="click to enlarge" />';
-        }).join("");
+      // Post date comes from the Jekyll filename convention
+      // (/_posts/YYYY-MM-DD-slug.md): key sorts, label displays.
+      var MONTHS = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+
+      function dateOf(path) {
+        var m = path.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return { key: "", label: "" };
+        return { key: m[1] + m[2] + m[3], label: MONTHS[parseInt(m[2], 10) - 1] + " " + m[1] };
+      }
+
+      // The map preview stays minimal: one photo, the name + date, and a
+      // link to the full write-up. Everything else lives on the page.
+      function popupHtml(post, path) {
+        var photo = (post.photos || [])[0];
+        var href = "/post.html?p=" + encodeURIComponent(path);
+        var when = dateOf(path).label;
         return '<div class="post-popup">' +
+          (photo ? '<img class="popup-photo" src="' + esc(photo) + '" alt="" loading="lazy" />' : '') +
           '<div class="post-title">' + esc(post.title) + '</div>' +
-          (post.place ? '<div class="post-place">' + esc(post.place) + '</div>' : '') +
-          (snails ? '<div class="post-rating">' + snails + '</div>' : '') +
-          (post.description ? '<div class="post-desc">' + esc(post.description) + '</div>' : '') +
-          '<div class="post-photos">' + thumbs + '</div>' +
+          (when ? '<div class="post-date">' + esc(when) + '</div>' : '') +
+          '<a class="read-more" href="' + esc(href) + '">read the whole trail &rarr;</a>' +
           '</div>';
       }
 
@@ -309,7 +474,115 @@
       }
 
       var lost = [];
-      var placed = [];
+      var entries = []; // { marker, coords, country, type } for filtering
+
+      // Country = last comma-separated segment of the post's `place:` line
+      // (e.g. "Nordhavn, Copenhagen, Denmark" -> "Denmark").
+      function countryOf(post) {
+        var parts = (post.place || "").split(",");
+        return parts.length ? parts[parts.length - 1].trim() : "";
+      }
+
+      var searchInput = document.getElementById("search-input");
+      var searchPanel = document.getElementById("search-panel");
+      var resultsBox = document.getElementById("search-results");
+      var countryChips = document.getElementById("country-chips");
+      var chips = document.querySelectorAll(".chip");
+      var selectedCountry = ""; // "" = everywhere
+
+      // Filters combine: a pin shows when its category chip is on AND it
+      // matches the selected country ("everywhere" = all). The view refits
+      // to whatever survives so a country pick jumps you straight there.
+      function applyFilters() {
+        var typesOn = {};
+        chips.forEach(function (c) {
+          typesOn[c.getAttribute("data-type")] = !c.classList.contains("off");
+        });
+        var visible = [];
+        entries.forEach(function (e) {
+          var show = typesOn[e.type] !== false && (!selectedCountry || e.country === selectedCountry);
+          if (show) {
+            if (!map.hasLayer(e.marker)) e.marker.addTo(map);
+            visible.push(e.coords);
+          } else if (map.hasLayer(e.marker)) {
+            map.closePopup();
+            map.removeLayer(e.marker);
+          }
+        });
+        if (visible.length) {
+          map.fitBounds(L.latLngBounds(visible).pad(0.25), { maxZoom: 8 });
+        }
+      }
+
+      chips.forEach(function (c) {
+        c.addEventListener("click", function () {
+          c.classList.toggle("off");
+          applyFilters();
+        });
+      });
+
+      // Typing in the bar live-searches post titles/places/descriptions,
+      // newest post first; picking a result flies to that pin (clearing
+      // any filter hiding it).
+      function renderResults() {
+        var q = searchInput.value.trim().toLowerCase();
+        resultsBox.innerHTML = "";
+        if (!q) return;
+        var hits = entries.filter(function (e) {
+          return (e.title + " " + e.place + " " + e.desc).toLowerCase().indexOf(q) !== -1;
+        }).sort(function (a, b) {
+          return b.dateKey < a.dateKey ? -1 : (b.dateKey > a.dateKey ? 1 : 0);
+        }).slice(0, 6);
+        if (!hits.length) {
+          resultsBox.innerHTML = '<div class="no-results">no snails found for “' + esc(q) + '”</div>';
+          return;
+        }
+        hits.forEach(function (e) {
+          var row = document.createElement("button");
+          row.className = "result-row";
+          row.innerHTML = snailSwatch(e.type) +
+            '<span>' + esc(e.title) + '</span>' +
+            '<span class="rr-place">' + esc(e.place) +
+            (e.dateLabel ? ' &middot; ' + esc(e.dateLabel) : '') + '</span>';
+          row.addEventListener("click", function () {
+            // Make sure nothing is filtering this pin out of view.
+            if (selectedCountry && selectedCountry !== e.country) setCountry("");
+            chips.forEach(function (c) {
+              if (c.getAttribute("data-type") === e.type) c.classList.remove("off");
+            });
+            applyFilters();
+            closePanel();
+            map.setView(e.coords, 10);
+            e.marker.openPopup();
+          });
+          resultsBox.appendChild(row);
+        });
+      }
+
+      function setCountry(country) {
+        selectedCountry = country;
+        countryChips.querySelectorAll(".cchip").forEach(function (c) {
+          c.classList.toggle("active", c.getAttribute("data-country") === country);
+        });
+      }
+
+      function openPanel() { searchPanel.classList.add("open"); }
+      function closePanel() { searchPanel.classList.remove("open"); }
+
+      searchInput.addEventListener("focus", openPanel);
+      searchInput.addEventListener("input", function () { openPanel(); renderResults(); });
+      searchInput.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { searchInput.blur(); closePanel(); }
+        if (e.key === "Enter") {
+          var first = resultsBox.querySelector(".result-row");
+          if (first) first.click();
+        }
+      });
+
+      // Click anywhere outside the search closes the options.
+      document.addEventListener("pointerdown", function (e) {
+        if (!e.target.closest || !e.target.closest(".search-wrap")) closePanel();
+      });
 
       // posts.json is the manifest of Jekyll posts to pin. Fetched with
       // no-cache (and the .md files too) so newly added visits show up
@@ -328,19 +601,54 @@
             if (!post || !post.photos || !post.photos.length) { lost.push(path); return; }
             return locatePost(post).then(function (coords) {
               if (!coords) { lost.push(post.title || path); return; }
-              L.marker(coords, { icon: snailIcon })
+              var marker = L.marker(coords, { icon: snailIcon(post.type || "food") })
                 .addTo(map)
-                .bindPopup(popupHtml(post));
-              placed.push(coords);
+                // autoPan padding keeps the popup clear of the header overlay
+                // (top) and the copyright/attribution (bottom), so a snail's
+                // detail card is never hidden behind the chrome or cut off.
+                .bindPopup(popupHtml(post, path), {
+                  maxWidth: 240,
+                  // Cap height to the viewport (minus the header/footer
+                  // clearance) so a tall card scrolls inside the popup
+                  // instead of spilling off-screen on short/landscape windows.
+                  maxHeight: Math.max(150, window.innerHeight - 150),
+                  keepInView: true,
+                  autoPanPaddingTopLeft: L.point(20, 100),
+                  autoPanPaddingBottomRight: L.point(20, 56)
+                });
+              var when = dateOf(path);
+              entries.push({
+                marker: marker,
+                coords: coords,
+                country: countryOf(post),
+                type: (post.type || "food").toLowerCase(),
+                title: post.title || "",
+                place: post.place || "",
+                desc: post.description || "",
+                dateKey: when.key,
+                dateLabel: when.label
+              });
             });
           })
           .catch(function () { lost.push(path); });
           }));
         })
         .then(function () {
-        if (placed.length) {
-          map.fitBounds(L.latLngBounds(placed).pad(0.25), { maxZoom: 8 });
-        }
+        // Build the country chips from the loaded posts (sorted, unique).
+        var countries = {};
+        entries.forEach(function (e) { if (e.country) countries[e.country] = true; });
+        ["", ].concat(Object.keys(countries).sort()).forEach(function (c) {
+          var chip = document.createElement("button");
+          chip.className = "cchip" + (c === "" ? " active" : "");
+          chip.setAttribute("data-country", c);
+          chip.textContent = c === "" ? "everywhere" : c;
+          chip.addEventListener("click", function () {
+            setCountry(c);
+            applyFilters();
+          });
+          countryChips.appendChild(chip);
+        });
+        applyFilters();
         if (lost.length) {
           document.getElementById("lost-snails").innerHTML =
             "<span>lost snails</span> (no GPS found): " + lost.map(esc).join(", ");
