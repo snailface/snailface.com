@@ -5,8 +5,8 @@
 //   RESEND_API_KEY       - API key from resend.com
 //   TURNSTILE_SECRET_KEY - secret key from the Cloudflare Turnstile dashboard
 //
-// Also replace the placeholder site key in index.html
-// (data-sitekey="YOUR_TURNSTILE_SITE_KEY") with your Turnstile *site* key.
+// The Turnstile *site* key is already configured in index.html (data-sitekey);
+// only the two environment variables above need to exist in Pages settings.
 //
 // RESEND_FROM currently uses Resend's shared sandbox address, which works
 // without verifying a domain but can ONLY deliver to the email address the

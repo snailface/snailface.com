@@ -1,0 +1,5 @@
+.DS_Store
+*.bak
+
+# Local Claude Code permission grants — machine-specific, never commit.
+.claude/settings.local.json

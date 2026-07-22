@@ -3,6 +3,7 @@ layout: post
 title: Kadeau
 place: Copenhagen, Denmark
 type: food
+coords: 55.67227, 12.58902
 photos:
   - /map-photos/kadeau-sunflower-caviar.jpg
 ---

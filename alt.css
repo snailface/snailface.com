@@ -1,4 +1,18 @@
-@import url('https://fonts.googleapis.com/css?family=Montserrat');
+/* Montserrat, self-hosted — same declaration as style.css and the inline
+   copies in map.html / post.html. Keep all four in sync.
+
+   This was previously an @import of fonts.googleapis.com, which is the worst
+   form of the dependency: an @import blocks this stylesheet from applying
+   until the font CSS is fetched, so 404.html and thank-you.html paid for two
+   extra origins *serially* before rendering anything. */
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/montserrat-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 * { margin: 0; padding: 0; }
 body {
@@ -18,7 +32,7 @@ body {
 @media only screen and (max-width: 768px),screen and (orientation: portrait), 
 screen and (hover: none) and (pointer: coarse) {
   html,body {
-      background: url(snail.svg) no-repeat top left;
+      background: url(snail.svg?v=2) no-repeat top left;
       background-size: cover;
       background-color: #cbde5f;
       background-size: 45% !important;
@@ -72,7 +86,7 @@ screen and (hover: none) and (pointer: coarse) {
 }
 @media only screen and (min-width: 769px) {
   html,body {
-      background: url(snail.svg) no-repeat top left fixed;
+      background: url(snail.svg?v=2) no-repeat top left fixed;
       background-size: 10em;
       background-color: #f399b7;
       background-position: 5px 5px; 

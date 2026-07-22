@@ -4,12 +4,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>snailface.com - snail trail</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
+  <title>snailface.com - trail map</title>
+  <meta name="description" content="A stop on the snailface trail map — food, sights and sounds from the road.">
+
+  <!-- Montserrat is self-hosted now, so there's no preconnect/stylesheet hop
+       to Google's two origins. crossorigin is required even though the font is
+       same-origin: fonts are always fetched in CORS mode, and a preload whose
+       mode doesn't match is simply downloaded a second time. -->
+  <link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="shortcut icon" href="/snailface.ico" />
   <style>
+    /* This page has no link to style.css — it is a self-contained article, and
+       style.css is ~15KB of index-page chrome (menu toggle, aside, form) that
+       would be render-blocking dead weight here, with an h1 rule that would
+       fight the styles below. So the @font-face is repeated inline instead of
+       pulling the whole stylesheet in for one rule. Keep it in sync with the
+       copy at the top of style.css; the unicode-range is Google's verbatim and
+       is what stops other subsets from ever being requested. It covers the
+       accents these posts actually contain — Riddarfjärden, Québec, Jordnær. */
+    @font-face {
+      font-family: "Montserrat";
+      font-style: normal;
+      font-weight: 100 900; /* one variable file covers 400 and the real bold */
+      font-display: swap;
+      src: url("/fonts/montserrat-latin.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
@@ -125,7 +146,10 @@
 
 <body>
   <header>
-    <a href="/"><img src="logo.svg?v=3" alt="snailface logo" /></a>
+    <!-- Root-absolute: this page is also served at /trail/<slug> (see
+         functions/trail/[slug].js), where a relative src would resolve to
+         /trail/logo.svg and 404. -->
+    <a href="/"><img src="/logo.svg?v=3" alt="snailface logo" /></a>
     <a class="back" href="/map.html">&larr; back to the map</a>
   </header>
 
@@ -170,6 +194,27 @@
         return fm;
       }
 
+      // Photos ship with downscaled derivatives beside the original:
+      // /map-photos/foo.jpg -> /map-photos/foo-1400.jpg. The article column is
+      // capped at 720px minus 24px padding (~672 CSS px), so 1400px covers a
+      // 2x display.
+      //
+      // The lightbox reuses whatever the article already loaded rather than
+      // fetching the original. Only one of the eight source photos is wider
+      // than 1400px, so for the other seven the original is the *same pixel
+      // dimensions* at 2-3x the bytes — opening the lightbox would have cost
+      // a second download for zero extra detail. Reusing the loaded image
+      // makes it open instantly with no network at all. The originals stay
+      // on disk as the archival copies (they hold the EXIF/GPS the post
+      // coordinates came from) but are no longer served.
+      //
+      // Anything that isn't a /map-photos/*.jpg is returned untouched.
+      function sizedPhoto(src, width) {
+        return /^\/map-photos\/[^?#]+\.jpe?g$/i.test(src)
+          ? src.replace(/\.jpe?g$/i, "-" + width + ".jpg")
+          : src;
+      }
+
       function showMissing(msg) {
         main.innerHTML = '<div class="article-card"><div class="missing">' +
           esc(msg) + ' <a class="back" href="/map.html">&larr; back to the map</a></div></div>';
@@ -185,12 +230,23 @@
       }
 
       function render(post, postPath) {
-        document.title = "snailface.com - " + (post.title || "snail trail");
+        document.title = "snailface.com - " + (post.title || "trail map");
+        // Mirror the title into the meta description for crawlers that run JS;
+        // the static tag in <head> remains the fallback for those that don't.
+        var desc = document.querySelector('meta[name="description"]');
+        if (desc && post.title) {
+          desc.setAttribute("content", post.title +
+            " — a stop on the snailface trail map. Food, sights and sounds from the road.");
+        }
         var paras = (post.body || "").split(/\n\s*\n/).filter(function (p) { return p.trim(); })
           .map(function (p) { return "<p>" + esc(p.replace(/\s+/g, " ").trim()) + "</p>"; }).join("");
         var photos = (post.photos || []).map(function (src) {
-          return '<img src="' + esc(src) + '" data-full="' + esc(src) +
-            '" alt="" title="click to enlarge" />';
+          return '<img src="' + esc(sizedPhoto(src, 1400)) + '" data-orig="' + esc(src) +
+            '" alt="" title="click to enlarge"' +
+            // Missing derivative (post added without re-running the resize
+            // step) falls back to the original; if that's missing too, hide
+            // the img so the article isn't marred by a broken-image glyph.
+            ' onerror="this.onerror=function(){this.style.display=\'none\';};this.src=this.getAttribute(\'data-orig\');" />';
         }).join("");
         var when = dateLabelOf(postPath);
         main.innerHTML = '<div class="article-card">' +
@@ -202,32 +258,55 @@
           '</div>';
       }
 
-      // Which post to show. Only same-origin /_posts/*.md paths are allowed,
-      // so the query param can't point the fetch anywhere unexpected.
-      var params = new URLSearchParams(location.search);
-      var path = params.get("p") || "";
-      if (!/^\/_posts\/[\w.-]+\.md$/.test(path)) {
-        showMissing("that trail doesn't exist.");
-        return;
-      }
+      // Server-rendered? /trail/<slug> is served by functions/trail/[slug].js,
+      // which uses this very file as its template: it rewrites <title>, the
+      // description meta, and <main> (marking it data-prerendered) with the
+      // article already in place. In that case there is nothing to fetch —
+      // the code below only wires up the lightbox, which is delegated and
+      // works on server-rendered markup unchanged.
+      if (!main.hasAttribute("data-prerendered")) {
+        // Which post to show. Only same-origin /_posts/*.md paths are allowed,
+        // so the query param can't point the fetch anywhere unexpected.
+        var params = new URLSearchParams(location.search);
+        var path = params.get("p") || "";
+        if (!/^\/_posts\/[\w.-]+\.md$/.test(path)) {
+          showMissing("that trail doesn't exist.");
+          return;
+        }
 
-      fetch(path, { cache: "no-cache" })
-        .then(function (res) {
-          if (!res.ok) throw new Error(res.status);
-          return res.text();
-        })
-        .then(function (text) {
-          var post = parsePost(text);
-          if (!post) { showMissing("that trail couldn't be read."); return; }
-          render(post, path);
-        })
-        .catch(function () { showMissing("that trail couldn't be found."); });
+        // Old-style link on production: hand off to the canonical clean URL
+        // (real per-post meta, one URL per post for search engines). Local
+        // dev has no Functions runtime, so localhost keeps the ?p= flow —
+        // which is also the permanent fallback for old bookmarks anywhere
+        // the redirect can't run.
+        var slugMatch = path.match(/^\/_posts\/\d{4}-\d{2}-\d{2}-(.+)\.md$/);
+        if (slugMatch && location.hostname === "snailface.com") {
+          location.replace("/trail/" + slugMatch[1]);
+          return;
+        }
+
+        fetch(path)
+          .then(function (res) {
+            if (!res.ok) throw new Error(res.status);
+            return res.text();
+          })
+          .then(function (text) {
+            var post = parsePost(text);
+            if (!post) { showMissing("that trail couldn't be read."); return; }
+            render(post, path);
+          })
+          .catch(function () { showMissing("that trail couldn't be found."); });
+      }
 
       // Any photo opens the lightbox; clicking it (or Escape) closes it.
       main.addEventListener("click", function (e) {
         var img = e.target.closest && e.target.closest(".photos img");
         if (!img) return;
-        lightboxImg.src = img.getAttribute("data-full") || img.src;
+        // Reuse the article's already-decoded image (see sizedPhoto above):
+        // same URL means the browser serves it from cache, so the lightbox
+        // opens with no network request. If the derivative 404'd, onerror has
+        // already swapped src to the original, and that is what opens here.
+        lightboxImg.src = img.src;
         lightbox.classList.add("open");
       });
 
@@ -246,8 +325,13 @@
   </script>
 
   <footer class="page-footer">
-    <span class="copyright">&copy; <script>document.write(new Date().getFullYear())</script>.</span>
+    <span class="copyright">&copy; <span id="footer-year">2026</span>.</span>
   </footer>
+
+  <script>
+    // Footer year without document.write (which blocks the parser).
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+  </script>
 </body>
 
 </html>

@@ -7,31 +7,40 @@
   <meta itemprop="name" content="Snailface - transmission">
   <meta itemprop="image" content="/eye.jpg">
   <title>snailface.com - transmission confirmation</title>
-  <link href="/alt.css" type="text/css" crossorigin="anonymous" rel="stylesheet" />
+  <meta name="robots" content="noindex" />
+
+  <!-- Montserrat is self-hosted (see the @font-face at the top of alt.css).
+       crossorigin is mandatory on a font preload even same-origin, or the
+       file is fetched twice. -->
+  <link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link href="/alt.css?v=2" type="text/css" crossorigin="anonymous" rel="stylesheet" />
   <link rel="shortcut icon" href="/snailface.ico" />
   <meta property="og:title" content="snailface.com - transmission confirmation" />
   <meta property="og:description" content="transmission confirmation" />
   <meta property="og:url" content="https://snailface.com/thank-you" />
-  <meta property="og:image" content="/eye.jpg" />
+  <meta property="og:image" content="https://snailface.com/eye.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="snailface.com - thanks for your post" />
   <meta name="twitter:description" content="snailface.com" />
-  <meta name="twitter:image" content="https://snailface.com.com/logo.png" />
-  <meta name="twitter:url" content="https://snailface.com./thank-you" />
+  <meta name="twitter:image" content="https://snailface.com/logo.png" />
+  <meta name="twitter:url" content="https://snailface.com/thank-you" />
 </head>
 
 <body>
-    <img src="/logo.svg" />
+    <img src="/logo.svg?v=3" alt="snailface logo" />
     <main>
       <div class="footer">
-        © <script>document.write(new Date().getFullYear())</script>.
+        © <span id="footer-year">2026</span>.
       </div>
   <h1>
     <span> correspondence has been submitted, a human may be in touch. <br> feel free to go back <a href="/">home</a> anytime. </span>
   </h1>
 
 </main>
-
+<script>
+  // Footer year without document.write (which blocks the parser).
+  document.getElementById("footer-year").textContent = new Date().getFullYear();
+</script>
 </body>
 
 </html>

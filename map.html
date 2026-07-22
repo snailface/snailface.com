@@ -4,14 +4,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>snailface.com - snail trail map</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
+  <title>snailface.com - trail map</title>
+  <meta name="description" content="The snailface trail map — pins of food, sights and sounds from the road, each one a little story." />
+  <!-- Montserrat is self-hosted now, so there's no preconnect/stylesheet hop
+       to Google's two origins. crossorigin is required even though the font is
+       same-origin: fonts are always fetched in CORS mode, and a preload whose
+       mode doesn't match is simply downloaded a second time. -->
+  <link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="shortcut icon" href="/snailface.ico" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Leaflet is vendored under /vendor/leaflet/ — an unpkg fetch put a
+       DNS+TLS handshake on the map's critical path and made a third party's
+       uptime our uptime (SRI guards integrity, not availability). Same-origin
+       now, so no integrity/crossorigin; ?v busts the year-long immutable cache. -->
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css?v=1.9.4" />
   <style>
+    /* This page has no link to style.css — it is a self-contained map, and
+       style.css is ~15KB of index-page chrome (menu toggle, aside, form) that
+       would be render-blocking dead weight here, with an h1 rule that would
+       fight the styles below. So the @font-face is repeated inline instead of
+       pulling the whole stylesheet in for one rule. Keep it in sync with the
+       copy at the top of style.css; the unicode-range is Google's verbatim and
+       is what stops other subsets from ever being requested. */
+    @font-face {
+      font-family: "Montserrat";
+      font-style: normal;
+      font-weight: 100 900; /* one variable file covers 400 and the real bold */
+      font-display: swap;
+      src: url("/fonts/montserrat-latin.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body { height: 100%; }
@@ -92,6 +114,10 @@
       padding: 10px 12px 12px;
       max-height: 62vh;
       overflow-y: auto;
+      /* Nothing may push the panel sideways — a result row that overflowed
+         used to spawn a horizontal scrollbar and run its text out past the
+         bubble's edge. The rows are made to fit instead (see .result-row). */
+      overflow-x: hidden;
     }
 
     .search-panel.open { display: block; }
@@ -127,7 +153,29 @@
     }
 
     .result-row:hover { background: #76ced9; }
-    .result-row .rr-place { font-weight: normal; opacity: .75; margin-left: auto; font-size: .9em; white-space: nowrap; }
+
+    /* Both text spans truncate rather than overflow. Flex items default to
+       min-width:auto, which refuses to shrink below their content — that is
+       what let a long "place · date" run outside the panel on a narrow
+       screen. min-width:0 lets them shrink; ellipsis shows where they were
+       cut. The snail swatch is fixed-size and never shrinks. */
+    .result-row > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-row .tsnail { flex: none; }
+
+    /* The title is the useful part, so it doesn't shrink at all (flex-shrink
+       0) — the place/date absorbs the whole squeeze and ellipsizes. Shrink
+       factors alone weren't enough: flex shrinks in proportion to base size,
+       so a short title like "Kadeau" still lost characters while the long
+       place string kept them. The 60% cap stops a very long title from
+       crowding the place out completely. */
+    .result-row > span:not(.rr-place) { flex: 0 0 auto; max-width: 60%; }
+    .result-row .rr-place { font-weight: normal; opacity: .75; margin-left: auto; font-size: .9em; flex: 0 1 auto; }
     .no-results { font-size: .78em; font-weight: bold; color: #00545e; opacity: .7; padding: 2px 2px 4px; }
 
     .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -219,7 +267,15 @@
       width: 22px;
       height: 22px;
       padding: 0 !important;
-      font: bold 15px/20px "Montserrat", sans-serif !important;
+      /* Centered with flex rather than line-height. box-sizing is border-box
+         (see the * rule at the top), so this 22px circle has only an 18px
+         content box — the old 20px line-height overflowed it and pushed the
+         glyph below center. flex centering is independent of font metrics,
+         and Leaflet 1.9 wraps the x in its own <span>, which centers cleanly. */
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      font: bold 15px/1 "Montserrat", sans-serif !important;
       color: #00545e !important;
       background: #76ced9 !important;
       border: 2px solid #00545e;
@@ -230,8 +286,14 @@
     .leaflet-popup-close-button:hover { background: #cbde5f !important; color: #00545e !important; }
 
     /* Clear a strip above the photo so the close circle sits in its own
-       band of pink instead of overlapping the image corner. */
-    .leaflet-popup-content { margin-top: 36px; }
+       band of pink instead of overlapping the image corner.
+
+       This MUST be padding, not margin. Leaflet sizes the pink wrapper from
+       the content element's offsetHeight, which includes padding but not
+       margin — with margin-top the wrapper came out 36px short and the title
+       and "read the whole trail" link spilled out past the bottom edge of
+       the card. */
+    .leaflet-popup-content { padding-top: 36px; margin-top: 0; }
 
     .post-popup { max-width: 220px; text-align: center; }
 
@@ -342,7 +404,7 @@
     <div class="search-wrap">
       <div class="search-bar">
         <span class="mag" aria-hidden="true">🔍</span>
-        <input id="search-input" type="text" placeholder="snail trail map" autocomplete="off" aria-label="search the snail trail" />
+        <input id="search-input" type="text" placeholder="trail map" autocomplete="off" aria-label="search the trail map" />
       </div>
       <div class="search-panel" id="search-panel">
         <div id="search-results"></div>
@@ -350,9 +412,9 @@
         <div class="chip-row" id="country-chips"></div>
         <div class="panel-label">what</div>
         <div class="chip-row">
-          <button class="chip" data-type="food"><img class="tsnail t-food" src="/snail.svg" alt="" />food</button>
-          <button class="chip" data-type="sights"><img class="tsnail t-sights" src="/snail.svg" alt="" />sights</button>
-          <button class="chip" data-type="sounds"><img class="tsnail t-sounds" src="/snail.svg" alt="" />sounds</button>
+          <button class="chip" data-type="food"><img class="tsnail t-food" src="/snail.svg?v=2" alt="" />food</button>
+          <button class="chip" data-type="sights"><img class="tsnail t-sights" src="/snail.svg?v=2" alt="" />sights</button>
+          <button class="chip" data-type="sounds"><img class="tsnail t-sounds" src="/snail.svg?v=2" alt="" />sounds</button>
         </div>
         <div class="panel-foot"><a href="/">&larr; back to the eye</a></div>
       </div>
@@ -360,19 +422,58 @@
   </div>
 
   <div class="overlay map-foot">
-    <span class="copyright">&copy; <script>document.write(new Date().getFullYear())</script>.</span>
+    <span class="copyright">&copy; <span id="footer-year">2026</span>.</span>
   </div>
 
   <div id="lost-snails"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://unpkg.com/exifr@7.1.3/dist/lite.umd.js"></script>
+  <script src="/vendor/leaflet/leaflet.js?v=1.9.4"></script>
   <script>
     (function () {
       "use strict";
 
-      var map = L.map("map", { worldCopyJump: true }).setView([48, 8], 4);
+      // Footer year without document.write (which blocks the parser).
+      document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+      // One world on screen, but the globe still wraps: pan east past Alaska
+      // and you carry on into Korea rather than hitting a wall.
+      //
+      // Those two rules don't conflict, because "never show the world twice"
+      // is enforced entirely by minZoom (see clampMinZoom below). If the world
+      // is always at least as wide as the viewport, two whole copies can never
+      // fit on screen at once. Zoomed in past that floor you're seeing less
+      // than one world, so crossing +/-180 just reveals the neighbouring copy
+      // — that's the seam continuing, not the map duplicating. This is why
+      // noWrap is deliberately NOT set on the tile layer.
+      //
+      // worldCopyJump moves the markers into whichever copy you've panned to,
+      // so the pins are still there after you cross the antimeridian.
+      //
+      // maxBounds exists to stop vertical panning past the poles into empty
+      // space — without it a single downward flick sends the map thousands of
+      // pixels below the world and every pin leaves the screen.
+      //
+      // The longitude range is huge but deliberately FINITE. +/-Infinity is
+      // the obvious way to say "don't clamp longitude", but Leaflet projects
+      // maxBounds into pixel space to clamp the centre, and an infinite
+      // longitude projects to an infinite x — the subtraction that follows
+      // evaluates Infinity minus Infinity, i.e. NaN, and a NaN clamp seizes up
+      // panning almost completely. A finite 100000 degrees is ~277 world
+      // copies in each direction: endless in practice, and it still projects
+      // to a real number.
+      var PAN_BOUNDS = L.latLngBounds(
+        L.latLng(-85, -100000),
+        L.latLng(85, 100000)
+      );
+
+      var map = L.map("map", {
+        worldCopyJump: true,
+        maxBounds: PAN_BOUNDS,
+        // 1.0 = a hard wall; anything less lets the map rubber-band past the
+        // edge and spring back, which reads as a glitch rather than a limit.
+        maxBoundsViscosity: 1
+      }).setView([48, 8], 4);
+
       // CARTO's flat light basemap takes the duotone filter cleanly
       // (plain OSM tiles have too many competing colors to unify).
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -380,6 +481,21 @@
         subdomains: "abcd",
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
       }).addTo(map);
+
+      // The world is 256 * 2^zoom px square, so the smallest zoom that still
+      // covers the viewport depends on the window size — hardcoding a minZoom
+      // would either leave empty background on a large screen or over-zoom a
+      // phone. Recompute on resize, and pull the camera back in if the
+      // current zoom just became illegal.
+      function clampMinZoom() {
+        var size = map.getSize();
+        var fit = Math.log(Math.max(size.x, size.y) / 256) / Math.LN2;
+        var min = Math.max(0, Math.ceil(fit));
+        map.setMinZoom(min);
+        if (map.getZoom() < min) map.setZoom(min);
+      }
+      clampMinZoom();
+      map.on("resize", clampMinZoom);
 
       // Category isn't a badge anymore — it's the color of the snail emblem
       // itself (a CSS tint class, natural green for food).
@@ -391,14 +507,14 @@
 
       // A small tinted snail for chips and search results.
       function snailSwatch(type) {
-        return '<img class="tsnail ' + typeClass(type) + '" src="/snail.svg" alt="" />';
+        return '<img class="tsnail ' + typeClass(type) + '" src="/snail.svg?v=2" alt="" />';
       }
 
       // snail.svg is 463x187 (~2.5:1); anchor at the snail's belly.
       function snailIcon(type) {
         return L.divIcon({
           className: "snail-pin",
-          html: '<img class="' + typeClass(type) + '" src="/snail.svg" alt="" />',
+          html: '<img class="' + typeClass(type) + '" src="/snail.svg?v=2" alt="" />',
           iconSize: [60, 24],
           iconAnchor: [30, 22],
           popupAnchor: [0, -22]
@@ -443,34 +559,55 @@
         return { key: m[1] + m[2] + m[3], label: MONTHS[parseInt(m[2], 10) - 1] + " " + m[1] };
       }
 
+      // Photos ship with downscaled derivatives beside the original:
+      // /map-photos/foo.jpg -> /map-photos/foo-480.jpg. The popup renders the
+      // photo in a 190x130 CSS px box, so 480px is ample even at 2x DPR.
+      // Anything that isn't a /map-photos/*.jpg is returned untouched.
+      function sizedPhoto(src, width) {
+        return /^\/map-photos\/[^?#]+\.jpe?g$/i.test(src)
+          ? src.replace(/\.jpe?g$/i, "-" + width + ".jpg")
+          : src;
+      }
+
+      // If a derivative is missing (e.g. a new post added without re-running
+      // the resize step), fall back to the original instead of a broken image.
+      // Missing derivative -> retry the original; original also missing ->
+      // hide the img so the popup shows text-only instead of a broken-image
+      // glyph (the state a brand-new post is in until its photo lands).
+      var PHOTO_FALLBACK = ' onerror="this.onerror=function(){this.style.display=\'none\';};this.src=this.getAttribute(\'data-full\');"';
+
       // The map preview stays minimal: one photo, the name + date, and a
       // link to the full write-up. Everything else lives on the page.
       function popupHtml(post, path) {
         var photo = (post.photos || [])[0];
-        var href = "/post.html?p=" + encodeURIComponent(path);
+        // Production links use the clean /trail/<slug> URLs (served by
+        // functions/trail/[slug].js — real per-post meta, and internal links
+        // are how search engines discover them). Local dev has no Functions
+        // runtime, so localhost keeps linking the ?p= fallback, which renders
+        // identically client-side.
+        var slugMatch = path.match(/^\/_posts\/\d{4}-\d{2}-\d{2}-(.+)\.md$/);
+        var href = (slugMatch && location.hostname === "snailface.com")
+          ? "/trail/" + slugMatch[1]
+          : "/post.html?p=" + encodeURIComponent(path);
         var when = dateOf(path).label;
         return '<div class="post-popup">' +
-          (photo ? '<img class="popup-photo" src="' + esc(photo) + '" alt="" loading="lazy" />' : '') +
+          (photo ? '<img class="popup-photo" src="' + esc(sizedPhoto(photo, 480)) +
+            '" data-full="' + esc(photo) + '" alt="" loading="lazy"' + PHOTO_FALLBACK + ' />' : '') +
           '<div class="post-title">' + esc(post.title) + '</div>' +
           (when ? '<div class="post-date">' + esc(when) + '</div>' : '') +
           '<a class="read-more" href="' + esc(href) + '">read the whole trail &rarr;</a>' +
           '</div>';
       }
 
-      // Pin location = first photo with GPS in its EXIF.
+      // Pin location comes straight from the post's `coords: lat, lon` line
+      // (extracted from the photo EXIF once, by hand, rather than re-read
+      // from every JPEG on every page load).
       function locatePost(post) {
-        var photos = post.photos || [];
-        var chain = Promise.resolve(null);
-        photos.forEach(function (src) {
-          chain = chain.then(function (found) {
-            if (found) return found;
-            return exifr.gps(src).then(function (gps) {
-              return (gps && isFinite(gps.latitude) && isFinite(gps.longitude))
-                ? [gps.latitude, gps.longitude] : null;
-            }).catch(function () { return null; });
-          });
-        });
-        return chain;
+        var parts = String(post.coords || "").split(",");
+        if (parts.length !== 2) return null;
+        var lat = parseFloat(parts[0]);
+        var lon = parseFloat(parts[1]);
+        return (isFinite(lat) && isFinite(lon)) ? [lat, lon] : null;
       }
 
       var lost = [];
@@ -481,6 +618,23 @@
       function countryOf(post) {
         var parts = (post.place || "").split(",");
         return parts.length ? parts[parts.length - 1].trim() : "";
+      }
+
+      // Search normalisation, so "quebec" finds "Québec" and vice versa.
+      //
+      // NFD splits an accented letter into its base plus a separate combining
+      // mark, which the regex then strips: é -> e, è -> e, ä -> a, ç -> c.
+      //
+      // That handles most of it, but not every accented letter is a base plus
+      // a mark. æ and ø are letters in their own right in Danish and Norwegian
+      // and survive NFD untouched, so they need spelling out by hand — which
+      // matters here, since it's what lets "jordnaer" match "Jordnær".
+      var FOLD_PAIRS = [[/æ/g, "ae"], [/ø/g, "o"], [/å/g, "a"], [/ß/g, "ss"], [/đ|ð/g, "d"], [/ł/g, "l"], [/þ/g, "th"]];
+
+      function fold(s) {
+        s = String(s || "").toLowerCase();
+        for (var i = 0; i < FOLD_PAIRS.length; i++) s = s.replace(FOLD_PAIRS[i][0], FOLD_PAIRS[i][1]);
+        return s.normalize ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : s;
       }
 
       var searchInput = document.getElementById("search-input");
@@ -525,11 +679,11 @@
       // newest post first; picking a result flies to that pin (clearing
       // any filter hiding it).
       function renderResults() {
-        var q = searchInput.value.trim().toLowerCase();
+        var q = fold(searchInput.value.trim());
         resultsBox.innerHTML = "";
         if (!q) return;
         var hits = entries.filter(function (e) {
-          return (e.title + " " + e.place + " " + e.desc).toLowerCase().indexOf(q) !== -1;
+          return fold(e.title + " " + e.place + " " + e.desc).indexOf(q) !== -1;
         }).sort(function (a, b) {
           return b.dateKey < a.dateKey ? -1 : (b.dateKey > a.dateKey ? 1 : 0);
         }).slice(0, 6);
@@ -584,14 +738,15 @@
         if (!e.target.closest || !e.target.closest(".search-wrap")) closePanel();
       });
 
-      // posts.json is the manifest of Jekyll posts to pin. Fetched with
-      // no-cache (and the .md files too) so newly added visits show up
-      // without waiting out the static host's cache TTL.
+      // posts.json is the manifest of Jekyll posts to pin. Only the manifest
+      // is fetched with no-cache, so a newly added visit shows up right away;
+      // the .md files themselves ride the normal HTTP cache (see _headers,
+      // which gives /_posts/* a short max-age).
       fetch("/map-photos/posts.json", { cache: "no-cache" })
         .then(function (res) { return res.json(); })
         .then(function (posts) {
           return Promise.all(posts.map(function (path) {
-        return fetch(path, { cache: "no-cache" })
+        return fetch(path)
           .then(function (res) {
             if (!res.ok) throw new Error(path + ": " + res.status);
             return res.text();
@@ -599,35 +754,34 @@
           .then(function (text) {
             var post = parsePost(text);
             if (!post || !post.photos || !post.photos.length) { lost.push(path); return; }
-            return locatePost(post).then(function (coords) {
-              if (!coords) { lost.push(post.title || path); return; }
-              var marker = L.marker(coords, { icon: snailIcon(post.type || "food") })
-                .addTo(map)
-                // autoPan padding keeps the popup clear of the header overlay
-                // (top) and the copyright/attribution (bottom), so a snail's
-                // detail card is never hidden behind the chrome or cut off.
-                .bindPopup(popupHtml(post, path), {
-                  maxWidth: 240,
-                  // Cap height to the viewport (minus the header/footer
-                  // clearance) so a tall card scrolls inside the popup
-                  // instead of spilling off-screen on short/landscape windows.
-                  maxHeight: Math.max(150, window.innerHeight - 150),
-                  keepInView: true,
-                  autoPanPaddingTopLeft: L.point(20, 100),
-                  autoPanPaddingBottomRight: L.point(20, 56)
-                });
-              var when = dateOf(path);
-              entries.push({
-                marker: marker,
-                coords: coords,
-                country: countryOf(post),
-                type: (post.type || "food").toLowerCase(),
-                title: post.title || "",
-                place: post.place || "",
-                desc: post.description || "",
-                dateKey: when.key,
-                dateLabel: when.label
+            var coords = locatePost(post);
+            if (!coords) { lost.push(post.title || path); return; }
+            var marker = L.marker(coords, { icon: snailIcon(post.type || "food") })
+              .addTo(map)
+              // autoPan padding keeps the popup clear of the header overlay
+              // (top) and the copyright/attribution (bottom), so a snail's
+              // detail card is never hidden behind the chrome or cut off.
+              .bindPopup(popupHtml(post, path), {
+                maxWidth: 240,
+                // Cap height to the viewport (minus the header/footer
+                // clearance) so a tall card scrolls inside the popup
+                // instead of spilling off-screen on short/landscape windows.
+                maxHeight: Math.max(150, window.innerHeight - 150),
+                keepInView: true,
+                autoPanPaddingTopLeft: L.point(20, 100),
+                autoPanPaddingBottomRight: L.point(20, 56)
               });
+            var when = dateOf(path);
+            entries.push({
+              marker: marker,
+              coords: coords,
+              country: countryOf(post),
+              type: (post.type || "food").toLowerCase(),
+              title: post.title || "",
+              place: post.place || "",
+              desc: post.description || "",
+              dateKey: when.key,
+              dateLabel: when.label
             });
           })
           .catch(function () { lost.push(path); });
@@ -651,7 +805,7 @@
         applyFilters();
         if (lost.length) {
           document.getElementById("lost-snails").innerHTML =
-            "<span>lost snails</span> (no GPS found): " + lost.map(esc).join(", ");
+            "<span>lost snails</span> (no coordinates found): " + lost.map(esc).join(", ");
         }
       });
     })();

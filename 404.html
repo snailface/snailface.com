@@ -7,12 +7,18 @@
   <meta itemprop="name" content="Snailface - Not found">
   <meta itemprop="image" content="/eye.jpg">
   <title>snailface.com - lost in the wilderness</title>
-  <link href="/alt.css" type="text/css" crossorigin="anonymous" rel="stylesheet" />
+  <meta name="robots" content="noindex" />
+
+  <!-- Montserrat is self-hosted (see the @font-face at the top of alt.css).
+       crossorigin is mandatory on a font preload even same-origin, or the
+       file is fetched twice. -->
+  <link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link href="/alt.css?v=2" type="text/css" crossorigin="anonymous" rel="stylesheet" />
   <link rel="shortcut icon" href="/snailface.ico" />
   <meta property="og:title" content="snailface.com - lost in the wilderness" />
   <meta property="og:description" content="wilderness" />
   <meta property="og:url" content="https://snailface.com" />
-  <meta property="og:image" content="/eye.jpg" />
+  <meta property="og:image" content="https://snailface.com/eye.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="snailface.com - lost in the wilderness" />
   <meta name="twitter:description" content="snailface.com" />
@@ -21,17 +27,20 @@
 </head>
 
 <body>
-    <img src="/logo.svg" />
+    <img src="/logo.svg?v=3" alt="snailface logo" />
     <main>
       <div class="footer">
-        © <script>document.write(new Date().getFullYear())</script>.
+        © <span id="footer-year">2026</span>.
       </div>
   <h1>
     <span> go back <a href="/">home</a> or play a <a href="/shell-game.html">game</a> young one - this destination is not for you. </span>
   </h1>
 
 </main>
-
+<script>
+  // Footer year without document.write (which blocks the parser).
+  document.getElementById("footer-year").textContent = new Date().getFullYear();
+</script>
 </body>
 
 </html>

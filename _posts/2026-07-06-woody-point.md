@@ -3,6 +3,7 @@ layout: post
 title: Taste, Gros Morne Inn
 place: Shoal Brook, Newfoundland, Canada
 type: food
+coords: 49.47974, -57.93036
 photos:
   - /map-photos/woody-point-braised-beef.jpg
 ---

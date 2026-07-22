@@ -3,6 +3,7 @@ layout: post
 title: Sushi Anaba
 place: Nordhavn, Copenhagen, Denmark
 type: food
+coords: 55.70645, 12.60228
 photos:
   - /map-photos/sushi-anaba-counter.jpg
 ---

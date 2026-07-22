@@ -3,6 +3,7 @@ layout: post
 title: Salmon Bay Farm
 place: Middle Bay, Québec, Canada
 type: food
+coords: 51.44618, -57.60901
 photos:
   - /map-photos/middle-bay-burger.jpg
 ---

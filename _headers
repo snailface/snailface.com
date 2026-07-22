@@ -2,6 +2,18 @@
 # Static assets are requested with version query strings (e.g. style.css?v=4),
 # so they can be cached aggressively and "busted" by bumping the version.
 
+# Passive security hardening for every response. Each of these is a
+# no-behavior-change header: nosniff stops MIME sniffing, Referrer-Policy
+# trims cross-origin referrers, X-Frame-Options blocks clickjacking frames,
+# Permissions-Policy switches off powerful features the site never uses.
+# Deliberately NO Content-Security-Policy: the site relies on inline
+# <script> blocks and inline onerror handlers, and a CSP would break them.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
 # Long-lived immutable caching for fingerprinted / rarely-changing assets.
 /*.svg
   Cache-Control: public, max-age=31536000, immutable
@@ -13,8 +25,17 @@
   Cache-Control: public, max-age=31536000, immutable
 /*.jpg
   Cache-Control: public, max-age=31536000, immutable
+# Self-hosted Montserrat. The filename names the subset, so a different cut
+# would be a different file — this one never changes under its own name.
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
 /*.ico
   Cache-Control: public, max-age=604800
+
+# Post markdown is fetched by map.html / post.html on the normal HTTP cache,
+# so keep the TTL short enough that an edited post shows up promptly.
+/_posts/*
+  Cache-Control: public, max-age=300, must-revalidate
 
 # HTML should always be revalidated so deploys show up immediately.
 /*.html

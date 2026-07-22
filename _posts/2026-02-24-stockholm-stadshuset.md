@@ -3,6 +3,7 @@ layout: post
 title: Stadshuset at Night
 place: Stockholm, Sweden
 type: sights
+coords: 59.32965, 18.05524
 photos:
   - /map-photos/stockholm-stadshuset-night.jpg
 ---

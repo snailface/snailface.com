@@ -7,23 +7,34 @@
     <meta itemprop="name" content="Snailface">
     <meta itemprop="image" content="/logo.png">
     <title>snailface.com - welcome</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
-    <link href="/style.css?v=11" type="text/css" rel="stylesheet" />
+    <meta name="description" content="An eye that watches you back, a trail map of food and sights from the road, and a few games. Welcome to snailface.">
+
+    <!-- Montserrat is self-hosted (see the @font-face at the top of style.css),
+         so there is no preconnect/stylesheet hop to Google's two origins.
+         Preloading here starts the woff2 immediately instead of waiting for
+         style.css to parse. crossorigin is required even though the font is
+         same-origin: fonts are always fetched in CORS mode, and a preload
+         whose mode doesn't match is simply downloaded a second time. -->
+    <link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link href="/style.css?v=12" type="text/css" rel="stylesheet" />
     <link rel="shortcut icon" href="/snailface.ico" />
     <!-- Start the eye download immediately instead of waiting for
          eye-interact.js to run. crossorigin="anonymous" matches fetch()'s
          default mode:"cors" credentials:"same-origin" so the preloaded
          response is reused rather than downloaded twice. -->
     <link rel="preload" href="/eye.svg?v=18" as="fetch" crossorigin="anonymous" />
+    <!-- The logo is the LCP element but sits in <body>, so it is otherwise
+         discovered late and races the eye preload above. No crossorigin here:
+         the <img> is same-origin and plain, and an unmatched CORS mode would
+         cost a second download. Keep ?v=3 identical to the <img> src. -->
+    <link rel="preload" as="image" href="/logo.svg?v=3" fetchpriority="high" />
     <!-- Turnstile is lazy-loaded by the inline script at the end of <body>:
          the contact form is invisible until the menu opens, so the widget
          script doesn't belong in the critical path. -->
     <script src="/eye-interact.js?v=18" defer></script>
     <meta content="website" property="og:type" />
     <meta content="https://snailface.com/" property="og:url" />
-    <meta content="/eye.jpg" property="og:image" />
+    <meta content="https://snailface.com/eye.jpg" property="og:image" />
     <meta property="og:title" content="snailface.com - welcome" />
     <meta property="og:description" content="welcome to snailface." />
     <meta name="twitter:card" content="summary_large_image" />
@@ -36,7 +47,7 @@
 <body>
   <div class="background-image" aria-hidden="true" tabindex="-1"></div>
 
-    <img src="logo.svg?v=3" width="300" height="400" decoding="async" alt="snailface logo" />
+    <img src="/logo.svg?v=3" width="300" height="400" fetchpriority="high" alt="snailface logo" />
 
     <main>
   <h1>
@@ -52,7 +63,7 @@
     <div class="aside-section aside-left">
       <img src="home.svg?v=2" class="aside-art-left" alt="" aria-hidden="true" width="1382" height="1286" loading="lazy" decoding="async" />
       <div class="aside-content">
-        <p> welcome to <strong>snailface</strong> - feel free to post a <strong>message</strong>... play the <a href="/pace-race.html" class="inline-link">pace race</a> or follow the <a href="/map.html" class="inline-link">snail trail</a>.</p>
+        <p> welcome to <strong>snailface</strong> - feel free to post a <strong>message</strong>... play the <a href="/pace-race.html" class="inline-link">pace race</a> or follow the <a href="/map.html" class="inline-link">trail map</a>.</p>
       </div>
     </div>
     <div class="aside-section aside-right">
@@ -83,7 +94,7 @@
            the filtered snail is rendered once and the wrapper's transform
            is composited on the GPU. Visual result is identical. -->
       <div class="aside-mascot">
-        <img src="snail.svg" alt="" aria-hidden="true" width="463" height="187" loading="lazy" decoding="async" />
+        <img src="snail.svg?v=2" alt="" aria-hidden="true" width="463" height="187" loading="lazy" decoding="async" />
       </div>
     </div>
     <div class="footer">
